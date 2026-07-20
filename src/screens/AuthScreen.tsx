@@ -69,7 +69,11 @@ export function AuthScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.brand}>
           <View style={styles.logo}>
             <Icon name="check" size={26} strokeWidth={2.4} color={onColor(theme.color.accent)} />

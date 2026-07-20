@@ -253,6 +253,79 @@ test.describe('Yeni davranışlar', () => {
   });
 });
 
+test.describe('Izgara düzeni', () => {
+  async function gridOrder(page: Page) {
+    const keys = ['water', 'meal', 'brush', 'english', 'steps', 'sleep', 'reading', 'meditation'];
+    const boxes = [];
+    for (const key of keys) {
+      const box = await page.getByTestId(`tile-${key}`).boundingBox();
+      boxes.push({ key, x: box!.x, y: box!.y });
+    }
+    boxes.sort((a, b) => a.y - b.y || a.x - b.x);
+    return boxes.map((b) => b.key);
+  }
+
+  test('kutucuklar sürüklenerek yeniden sıralanır ve sıra kalıcı olur', async ({ page }) => {
+    await registerThroughUi(page, 'reorder');
+    const before = await gridOrder(page);
+    expect(before[0]).toBe('water');
+
+    const src = (await page.getByTestId('tile-water').boundingBox())!;
+    const dst = (await page.getByTestId('tile-brush').boundingBox())!;
+
+    await page.mouse.move(src.x + src.width / 2, src.y + src.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        src.x + src.width / 2 + ((dst.x - src.x) * i) / 10,
+        src.y + src.height / 2,
+      );
+      await page.waitForTimeout(30);
+    }
+    await page.mouse.up();
+
+    await expect.poll(() => gridOrder(page).then((o) => o[0])).not.toBe('water');
+    const dragged = await gridOrder(page);
+
+    // The order lives on the server, so it must survive a reload.
+    await page.reload();
+    await expect(page.getByTestId('home-screen')).toBeVisible({ timeout: 30_000 });
+    await expect.poll(() => gridOrder(page)).toEqual(dragged);
+  });
+
+  test('kısa dokunuş sürükleme sayılmaz, modül açılır', async ({ page }) => {
+    await registerThroughUi(page, 'tapnotdrag');
+    await page.getByTestId('tile-water').click();
+    await expect(page.getByTestId('module-screen-water')).toBeVisible();
+  });
+
+  test('özet kartı küçültülüp büyütülebilir ve tercih kalıcı', async ({ page }) => {
+    await registerThroughUi(page, 'resize');
+
+    const card = page.getByTestId('score-card');
+    const large = (await card.boundingBox())!.height;
+
+    await page.getByTestId('summary-resize').click();
+    await expect.poll(async () => (await card.boundingBox())!.height).toBeLessThan(large);
+    const small = (await card.boundingBox())!.height;
+
+    await page.reload();
+    await expect(page.getByTestId('home-screen')).toBeVisible({ timeout: 30_000 });
+    // Stored on the device, so the compact choice survives a reload.
+    await expect.poll(async () => (await card.boundingBox())!.height).toBeLessThan(large);
+
+    await page.getByTestId('summary-resize').click();
+    await expect.poll(async () => (await card.boundingBox())!.height).toBeGreaterThan(small);
+  });
+
+  test('sağda kaydırma çubuğu görünmüyor', async ({ page }) => {
+    await registerThroughUi(page, 'scrollbar');
+    const gutter = await page.evaluate(() => window.innerWidth - document.documentElement.clientWidth);
+    // A visible scrollbar would eat horizontal space; the page must keep it all.
+    expect(gutter).toBe(0);
+  });
+});
+
 test.describe('Kişisel hedefler', () => {
   test('kullanıcı kendi hedefini belirleyebilir', async ({ page }) => {
     await registerThroughUi(page, 'ui-target');

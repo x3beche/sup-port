@@ -226,6 +226,68 @@ test.describe('Kademe kullanımı', () => {
   });
 });
 
+test.describe('Modül sırası', () => {
+  test('varsayılan sıra kayıt sırasıdır', async ({ request }) => {
+    const { token } = await registerUser(request, 'order');
+    const order = await (await request.get(`${API}/api/order`, { headers: auth(token) })).json();
+    expect(order).toEqual(['water', 'meal', 'brush', 'english', 'steps', 'sleep', 'reading', 'meditation']);
+  });
+
+  test('kaydedilen sıra özete yansır', async ({ request }) => {
+    const { token } = await registerUser(request, 'ordersave');
+    const headers = auth(token);
+    const wanted = ['sleep', 'water', 'steps', 'english', 'brush', 'meal', 'reading', 'meditation'];
+
+    expect((await request.put(`${API}/api/order`, { headers, data: { order: wanted } })).status()).toBe(200);
+
+    const summary = await (await request.get(`${API}/api/summary?date=${TODAY}`, { headers })).json();
+    expect(summary.modules.map((m: { key: string }) => m.key)).toEqual(wanted);
+  });
+
+  test('eksik anahtarlar sona eklenir', async ({ request }) => {
+    const { token } = await registerUser(request, 'orderpartial');
+    const headers = auth(token);
+
+    const result = await (
+      await request.put(`${API}/api/order`, { headers, data: { order: ['steps', 'water'] } })
+    ).json();
+
+    // A new module must not disappear just because an old order predates it.
+    expect(result.slice(0, 2)).toEqual(['steps', 'water']);
+    expect(result).toHaveLength(8);
+    expect(new Set(result).size).toBe(8);
+  });
+
+  test('bilinmeyen ve tekrar eden anahtarlar reddedilir', async ({ request }) => {
+    const { token } = await registerUser(request, 'orderbad');
+    const headers = auth(token);
+
+    expect((await request.put(`${API}/api/order`, { headers, data: { order: ['uydurma'] } })).status()).toBe(400);
+    expect(
+      (await request.put(`${API}/api/order`, { headers, data: { order: ['water', 'water'] } })).status(),
+    ).toBe(400);
+    expect((await request.put(`${API}/api/order`, { headers, data: { order: [] } })).status()).toBe(422);
+  });
+
+  test('sıra uçları oturum ister', async ({ request }) => {
+    expect((await request.get(`${API}/api/order`)).status()).toBe(401);
+    expect((await request.put(`${API}/api/order`, { data: { order: ['water'] } })).status()).toBe(401);
+  });
+
+  test('sıra kullanıcıya özel', async ({ request }) => {
+    const a = await registerUser(request, 'order-iso-a');
+    const b = await registerUser(request, 'order-iso-b');
+
+    await request.put(`${API}/api/order`, {
+      headers: auth(a.token),
+      data: { order: ['meditation', 'water', 'meal', 'brush', 'english', 'steps', 'sleep', 'reading'] },
+    });
+
+    const orderB = await (await request.get(`${API}/api/order`, { headers: auth(b.token) })).json();
+    expect(orderB[0]).toBe('water');
+  });
+});
+
 test.describe('Tracker', () => {
   test('tüm tracker uçları oturum ister', async ({ request }) => {
     for (const path of ['/api/modules', '/api/summary', '/api/history/water']) {

@@ -11,11 +11,18 @@ from ..models import (
     EntryValue,
     ModuleProgress,
     ModuleTarget,
+    OrderUpdate,
     TargetUpdate,
     WeekDay,
 )
 from ..modules import MODULES, MODULES_BY_KEY, module_list
-from ..targets import custom_targets, effective_target, favorite_step, usage_field
+from ..targets import (
+    custom_targets,
+    effective_target,
+    favorite_step,
+    ordered_modules,
+    usage_field,
+)
 
 router = APIRouter(prefix="/api", tags=["tracker"])
 
@@ -112,7 +119,7 @@ async def daily_summary(
     overrides = custom_targets(user)
 
     progress: list[ModuleProgress] = []
-    for module in MODULES:
+    for module in ordered_modules(user, MODULES):
         value = float(values.get(module.key, 0))
         target = overrides.get(module.key, module.target)
         ratio = min(value / target, 1.0) if target else 0.0
@@ -285,3 +292,29 @@ async def weekly_summary(
             )
         )
     return result
+
+
+@router.get("/order", response_model=list[str])
+async def get_order(user: dict = Depends(current_user)):
+    return [m.key for m in ordered_modules(user, MODULES)]
+
+
+@router.put("/order", response_model=list[str])
+async def set_order(payload: OrderUpdate, user: dict = Depends(current_user)):
+    """Izgaradaki modül sırasını kaydeder."""
+    unknown = [key for key in payload.order if key not in MODULES_BY_KEY]
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Bilinmeyen modül: {', '.join(unknown)}",
+        )
+
+    # Duplicates would make the grid render a module twice.
+    if len(set(payload.order)) != len(payload.order):
+        raise HTTPException(status_code=400, detail="Sıralamada tekrar eden modül var")
+
+    await _users().update_one(
+        {"_id": user["_id"]},
+        {"$set": {"module_order": payload.order}},
+    )
+    return [m.key for m in ordered_modules({**user, "module_order": payload.order}, MODULES)]

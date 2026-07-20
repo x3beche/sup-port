@@ -212,6 +212,7 @@ export function ModuleScreen({
       style={styles.flex}
       contentContainerStyle={styles.content}
       testID={`module-screen-${module.key}`}
+      showsVerticalScrollIndicator={false}
     >
       <View style={styles.topBar}>
         <Pressable

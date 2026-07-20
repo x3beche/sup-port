@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ModuleScreen } from './src/screens/ModuleScreen';
+import { hideScrollbars } from './src/lib/webChrome';
 import { theme } from './src/theme';
 import type { ModuleProgress } from './src/types';
 
@@ -69,6 +70,7 @@ export default function App() {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.documentElement.lang = 'tr';
     }
+    hideScrollbars();
   }, []);
 
   return (

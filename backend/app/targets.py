@@ -51,3 +51,26 @@ def _usage_key(step: float) -> str:
 
 def usage_field(module_key: str, step: float) -> str:
     return f"step_usage.{module_key}.{_usage_key(step)}"
+
+
+def ordered_modules(user: dict, modules: tuple[Module, ...]) -> list[Module]:
+    """Kullanıcının kendi sıralaması; kayıtta olmayan modüller sona eklenir.
+
+    Yeni bir modül eklendiğinde eski sıralamalar bozulmasın diye eksikler
+    sessizce sona iliştirilir, bilinmeyen anahtarlar yok sayılır.
+    """
+    saved = user.get("module_order")
+    if not isinstance(saved, list):
+        return list(modules)
+
+    by_key = {m.key: m for m in modules}
+    seen: set[str] = set()
+    result: list[Module] = []
+    for key in saved:
+        module = by_key.get(key) if isinstance(key, str) else None
+        if module is not None and module.key not in seen:
+            seen.add(module.key)
+            result.append(module)
+
+    result.extend(m for m in modules if m.key not in seen)
+    return result

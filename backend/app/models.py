@@ -95,6 +95,10 @@ class DailySummary(BaseModel):
     modules: list[ModuleProgress]
 
 
+class OrderUpdate(BaseModel):
+    order: list[str] = Field(min_length=1, max_length=100)
+
+
 class WeekDay(BaseModel):
     date: date
     score: int

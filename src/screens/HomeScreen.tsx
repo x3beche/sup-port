@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -8,16 +8,18 @@ import {
   Text,
   View,
 } from 'react-native';
-import { ModuleTile } from '../components/ModuleTile';
-import { StaggeredItem } from '../components/ScreenTransition';
-import { ScoreRing } from '../components/ScoreRing';
+import { DraggableGrid } from '../components/DraggableGrid';
+import { SummaryCard } from '../components/SummaryCard';
 import { StepPad } from '../components/StepPad';
 import { WeeklyChart } from '../components/WeeklyChart';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest, todayIso } from '../lib/api';
+import { readJson, writeJson } from '../lib/storage';
 import { useCachedQuery } from '../lib/useCachedQuery';
 import { tabularNums, theme } from '../theme';
 import type { DailySummary, ModuleProgress, WeekDay } from '../types';
+
+const SUMMARY_COMPACT_KEY = 'summary-compact';
 
 const DATE_FORMAT: Intl.DateTimeFormatOptions = {
   day: 'numeric',
@@ -35,7 +37,7 @@ export function HomeScreen({ onOpenModule }: { onOpenModule: (m: ModuleProgress)
     [token, today],
   );
 
-  const { data, loading, refreshing, error, fromCache, refresh } = useCachedQuery<DailySummary>(
+  const { data, loading, refreshing, error, fromCache, refresh, setData } = useCachedQuery<DailySummary>(
     token ? `summary:${today}` : null,
     fetcher,
   );
@@ -52,6 +54,19 @@ export function HomeScreen({ onOpenModule }: { onOpenModule: (m: ModuleProgress)
   );
 
   const [quickAdd, setQuickAdd] = useState<ModuleProgress | null>(null);
+
+  // Size preference is a per-device layout choice, so it stays local.
+  const [compactSummary, setCompactSummary] = useState(false);
+  useEffect(() => {
+    void readJson<boolean>(SUMMARY_COMPACT_KEY).then((saved) => {
+      if (typeof saved === 'boolean') setCompactSummary(saved);
+    });
+  }, []);
+
+  const changeSummarySize = useCallback((compact: boolean) => {
+    setCompactSummary(compact);
+    void writeJson(SUMMARY_COMPACT_KEY, compact);
+  }, []);
 
   const openQuickAdd = useCallback((module: ModuleProgress) => {
     setQuickAdd((current) => (current?.key === module.key ? null : module));
@@ -82,6 +97,26 @@ export function HomeScreen({ onOpenModule }: { onOpenModule: (m: ModuleProgress)
     [quickAdd, refresh, refreshWeek, today, token],
   );
 
+  const saveOrder = useCallback(
+    async (keys: string[]) => {
+      // Optimistic: the grid already shows the new order, so a failed save just
+      // reverts on the next refresh rather than fighting the user's drag.
+      setData((current) => {
+        if (!current) return current;
+        const byKey = new Map(current.modules.map((m) => [m.key, m]));
+        const reordered = keys.map((k) => byKey.get(k)).filter(Boolean) as typeof current.modules;
+        return { ...current, modules: reordered };
+      });
+
+      try {
+        await apiRequest('/api/order', { method: 'PUT', body: { order: keys }, token });
+      } catch {
+        await refresh();
+      }
+    },
+    [refresh, setData, token],
+  );
+
   const prettyDate = useMemo(() => {
     try {
       return new Intl.DateTimeFormat('tr-TR', DATE_FORMAT).format(new Date(`${today}T00:00:00`));
@@ -105,6 +140,7 @@ export function HomeScreen({ onOpenModule }: { onOpenModule: (m: ModuleProgress)
       style={styles.flex}
       contentContainerStyle={styles.content}
       testID="home-screen"
+      showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl refreshing={refreshing && !fromCache} onRefresh={refresh} />
       }
@@ -129,34 +165,25 @@ export function HomeScreen({ onOpenModule }: { onOpenModule: (m: ModuleProgress)
         </View>
       ) : null}
 
-      {/* The ring already states the score; a second copy underneath only
-          competed with it, so the card carries one number and one fact. */}
-      <View style={styles.scoreCard} testID="score-card">
-        <ScoreRing score={data?.score ?? 0} />
-        <Text style={styles.scoreStat}>
-          <Text style={styles.scoreStatValue}>
-            {data?.completed_count ?? 0}/{data?.module_count ?? 0}
-          </Text>{' '}
-          tamamlandı
-        </Text>
-      </View>
+      <SummaryCard
+        score={data?.score ?? 0}
+        completed={data?.completed_count ?? 0}
+        total={data?.module_count ?? 0}
+        compact={compactSummary}
+        onCompactChange={changeSummarySize}
+      />
 
       {week?.length ? <WeeklyChart days={week} /> : null}
 
       <Text style={styles.sectionTitle}>Uygulamalar</Text>
 
-      <View style={styles.grid} testID="module-grid">
-        {modules.map((module, index) => (
-          <StaggeredItem key={module.key} index={index}>
-            <ModuleTile
-              module={module}
-              onPress={onOpenModule}
-              onLongPress={openQuickAdd}
-              active={quickAdd?.key === module.key}
-            />
-          </StaggeredItem>
-        ))}
-      </View>
+      <DraggableGrid
+        modules={modules}
+        onOpen={onOpenModule}
+        onQuickAdd={openQuickAdd}
+        onReorder={saveOrder}
+        activeKey={quickAdd?.key}
+      />
 
       {/* Long-press keeps the common case — log today's value — on the home
           screen instead of costing a round trip into the module and back. */}
@@ -239,24 +266,6 @@ const styles = StyleSheet.create({
     color: theme.color.warnText,
     fontWeight: '600',
   },
-  scoreCard: {
-    backgroundColor: theme.color.card,
-    borderRadius: theme.radius.lg,
-    paddingVertical: theme.space(6),
-    paddingHorizontal: theme.space(5),
-    alignItems: 'center',
-  },
-  scoreStat: {
-    marginTop: theme.space(4),
-    fontSize: theme.font.label,
-    color: theme.color.textMuted,
-  },
-  scoreStatValue: {
-    fontSize: theme.font.heading,
-    fontWeight: '700',
-    color: theme.color.text,
-    ...tabularNums,
-  },
   sectionTitle: {
     fontSize: theme.font.heading,
     fontWeight: '700',
@@ -295,11 +304,5 @@ const styles = StyleSheet.create({
     fontSize: theme.font.label,
     color: theme.color.textMuted,
     ...tabularNums,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: theme.space(6),
   },
 });

@@ -26,7 +26,15 @@ modül ızgarası.
 Her modülün kendi **artış kademeleri** var (su +1/+2/+4, adım +500/+1000/+2500).
 Kullanıcının en çok dokunduğu kademe sayılır ve arayüzde en geniş alanı alır.
 Kutucuğa **basılı tutmak** modülü açmadan hızlı kayıt panelini açar; haftalık
-grafiğe basılı tutmak görünümü puan/tamamlanan arasında değiştirir.
+grafiğe basılı tutmak görünümü puan/tamamlanan arasında değiştirir. Kutucuklar
+**sürüklenerek yeniden sıralanabilir** (sıra sunucuda, kullanıcıya özel saklanır)
+ve üstteki özet kartı tutamacından **büyük/kompakt** arasında boyutlandırılabilir
+(bu tercih cihazda kalır).
+
+Sürükleme için ek bir kütüphane kullanılmadı; PanResponder ile yazıldı, böylece
+web ve cihazda aynı çalışıyor ve native derleme zinciri değişmiyor. Dokunuş
+modülü açmaya, uzun basış hızlı kayda devam ediyor — hareket 8 px eşiğini
+aşmadan sürükleme sayılmıyor.
 
 Hedefler **kullanıcıya özel**: her modülün ekranından kendi hedefini belirleyebilir
 ya da varsayılana döndürebilirsin. Hedef değişince o günün tamamlanma durumu,
@@ -133,6 +141,8 @@ sunulduğu LAN adresi kullanılır. Elle vermek için `EXPO_PUBLIC_API_URL` tan�
 | `DELETE /api/targets/{modül}` | Varsayılan hedefe dön |
 | `GET /api/summary?date=` | Günlük puan ve modül ilerlemeleri |
 | `GET /api/summary/week?days=` | Haftalık puan serisi (grafik için) |
+| `GET /api/order` | Kullanıcının modül sırası |
+| `PUT /api/order` | Izgara sırasını kaydet |
 | `POST /api/auth/logout` | Oturumu sunucu tarafında iptal eder |
 | `PUT /api/entries/{modül}` | Değeri doğrudan ayarla |
 | `POST /api/entries/{modül}/add` | Değeri artır/azalt |
