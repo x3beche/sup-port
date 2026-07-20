@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from '../theme';
+import { Icon, type IconName } from './Icon';
 import type { ModuleProgress } from '../types';
 
 type Props = {
@@ -23,8 +24,8 @@ export function ModuleTile({ module, onPress }: Props) {
       testID={`tile-${module.key}`}
       style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}
     >
-      <View style={[styles.icon, { backgroundColor: withAlpha(module.color, '1F') }]}>
-        <Text style={styles.iconGlyph}>{module.icon}</Text>
+      <View style={[styles.icon, { backgroundColor: withAlpha(module.color, '26') }]}>
+        <Icon name={module.icon as IconName} size={28} color={module.color} />
         {module.completed ? (
           <View style={[styles.badge, { backgroundColor: module.color }]}>
             <Text style={styles.badgeGlyph}>✓</Text>
@@ -58,10 +59,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconGlyph: {
-    fontSize: 28,
-    lineHeight: 34,
   },
   badge: {
     position: 'absolute',

@@ -121,4 +121,71 @@ test.describe('Panel ve modüller', () => {
     await expect(page.getByTestId('history-chart')).toBeVisible();
     await expect(page.getByText('Son 7 gün')).toBeVisible();
   });
+
+  test('ikonlar emoji değil vektör çizim', async ({ page }) => {
+    await registerThroughUi(page, 'icons');
+    // Emoji would render as a text node; the tiles must contain real SVG art.
+    await expect(page.getByTestId('tile-water').locator('svg')).toHaveCount(1);
+    await expect(page.getByTestId('tile-sleep').locator('svg path').first()).toBeVisible();
+  });
+});
+
+test.describe('Kişisel hedefler', () => {
+  test('kullanıcı kendi hedefini belirleyebilir', async ({ page }) => {
+    await registerThroughUi(page, 'ui-target');
+
+    await page.getByTestId('tile-brush').click();
+    await expect(page.getByTestId('target-value')).toContainText('2 kez');
+
+    await page.getByTestId('edit-target').click();
+    await page.getByTestId('target-input').fill('5');
+    await page.getByTestId('target-save').click();
+
+    await expect(page.getByTestId('target-value')).toContainText('5 kez');
+    await expect(page.getByTestId('target-value')).toContainText('kendi hedefin');
+    await expect(page.getByTestId('module-value')).toContainText('/ 5 kez');
+  });
+
+  test('yeni hedef tamamlanma durumunu yeniden hesaplar', async ({ page }) => {
+    await registerThroughUi(page, 'ui-target-recalc');
+
+    await page.getByTestId('tile-brush').click();
+    await page.getByTestId('increment').click();
+    await page.getByTestId('increment').click();
+    await expect(page.getByText('Bugünlük tamam ✓')).toBeVisible();
+
+    await page.getByTestId('edit-target').click();
+    await page.getByTestId('target-input').fill('4');
+    await page.getByTestId('target-save').click();
+
+    // 2/4 is no longer complete, so the badge has to disappear.
+    await expect(page.getByText('Bugünlük tamam ✓')).toHaveCount(0);
+  });
+
+  test('hedef varsayılana döndürülebilir', async ({ page }) => {
+    await registerThroughUi(page, 'ui-target-reset');
+
+    await page.getByTestId('tile-water').click();
+    await page.getByTestId('edit-target').click();
+    await page.getByTestId('target-input').fill('12');
+    await page.getByTestId('target-save').click();
+    await expect(page.getByTestId('target-value')).toContainText('12 bardak');
+
+    await page.getByTestId('edit-target').click();
+    await page.getByTestId('target-reset').click();
+    await expect(page.getByTestId('target-value')).toContainText('8 bardak');
+    await expect(page.getByTestId('target-value')).not.toContainText('kendi hedefin');
+  });
+
+  test('geçersiz hedef hata gösterir', async ({ page }) => {
+    await registerThroughUi(page, 'ui-target-invalid');
+
+    await page.getByTestId('tile-water').click();
+    await page.getByTestId('edit-target').click();
+    await page.getByTestId('target-input').fill('0');
+    await page.getByTestId('target-save').click();
+
+    await expect(page.getByTestId('target-error')).toBeVisible();
+    await expect(page.getByTestId('target-editor')).toBeVisible();
+  });
 });

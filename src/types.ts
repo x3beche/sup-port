@@ -18,11 +18,22 @@ export type ModuleProgress = {
   color: string;
   unit: string;
   target: number;
+  default_target: number;
+  is_custom_target: boolean;
   step: number;
   description: string;
   value: number;
   ratio: number;
   completed: boolean;
+};
+
+export type ModuleTarget = {
+  key: string;
+  title: string;
+  unit: string;
+  target: number;
+  default_target: number;
+  is_custom: boolean;
 };
 
 export type DailySummary = {

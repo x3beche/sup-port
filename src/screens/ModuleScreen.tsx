@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Icon, type IconName } from '../components/Icon';
 import { ScoreRing } from '../components/ScoreRing';
+import { TargetEditor } from '../components/TargetEditor';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest, todayIso } from '../lib/api';
 import { useCachedQuery } from '../lib/useCachedQuery';
@@ -43,16 +45,51 @@ export function ModuleScreen({
 
   const applyValue = useCallback(
     (value: number) => {
-      const ratio = module.target ? Math.min(value / module.target, 1) : 0;
-      setModule((prev) => ({ ...prev, value, ratio, completed: ratio >= 1 }));
+      setModule((prev) => {
+        const ratio = prev.target ? Math.min(value / prev.target, 1) : 0;
+        return { ...prev, value, ratio, completed: ratio >= 1 };
+      });
       setHistory((current) =>
         current
           ? current.map((point) => (point.date === today ? { ...point, value } : point))
           : current,
       );
     },
-    [module.target, setHistory, today],
+    [setHistory, today],
   );
+
+  const applyTarget = useCallback(
+    (target: number, isCustom: boolean) => {
+      setModule((prev) => {
+        const ratio = target ? Math.min(prev.value / target, 1) : 0;
+        return { ...prev, target, is_custom_target: isCustom, ratio, completed: ratio >= 1 };
+      });
+      // The chart's "reached" threshold is the target, so it has to move too.
+      setHistory((current) =>
+        current ? current.map((point) => ({ ...point, target })) : current,
+      );
+    },
+    [setHistory],
+  );
+
+  const saveTarget = useCallback(
+    async (target: number) => {
+      const result = await apiRequest<{ target: number; is_custom: boolean }>(
+        `/api/targets/${module.key}`,
+        { method: 'PUT', body: { target }, token },
+      );
+      applyTarget(result.target, result.is_custom);
+    },
+    [applyTarget, module.key, token],
+  );
+
+  const resetTarget = useCallback(async () => {
+    const result = await apiRequest<{ target: number; is_custom: boolean }>(
+      `/api/targets/${module.key}`,
+      { method: 'DELETE', token },
+    );
+    applyTarget(result.target, result.is_custom);
+  }, [applyTarget, module.key, token]);
 
   const change = useCallback(
     async (delta: number) => {
@@ -98,8 +135,8 @@ export function ModuleScreen({
       </View>
 
       <View style={styles.card}>
-        <View style={[styles.icon, { backgroundColor: `${module.color}1F` }]}>
-          <Text style={styles.iconGlyph}>{module.icon}</Text>
+        <View style={[styles.icon, { backgroundColor: `${module.color}26` }]}>
+          <Icon name={module.icon as IconName} size={26} color={module.color} />
         </View>
         <Text style={styles.description}>{module.description}</Text>
 
@@ -144,6 +181,8 @@ export function ModuleScreen({
             {error}
           </Text>
         ) : null}
+
+        <TargetEditor module={module} onSave={saveTarget} onReset={resetTarget} />
       </View>
 
       <Text style={styles.sectionTitle}>Son {HISTORY_DAYS} gün</Text>
@@ -252,7 +291,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconGlyph: { fontSize: 26, lineHeight: 32 },
   description: {
     marginTop: theme.space(2),
     fontSize: theme.font.label,

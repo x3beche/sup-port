@@ -231,3 +231,102 @@ test.describe('Tracker', () => {
     expect(res.status()).toBe(404);
   });
 });
+
+test.describe('Kişisel hedefler', () => {
+  test('yeni kullanıcı varsayılan hedeflerle başlar', async ({ request }) => {
+    const { token } = await registerUser(request, 'tgt-default');
+    const targets = await (await request.get(`${API}/api/targets`, { headers: auth(token) })).json();
+
+    expect(targets.length).toBeGreaterThan(0);
+    expect(targets.every((t: { is_custom: boolean }) => !t.is_custom)).toBe(true);
+    for (const t of targets) expect(t.target).toBe(t.default_target);
+  });
+
+  test('hedef değiştirilir ve özete yansır', async ({ request }) => {
+    const { token } = await registerUser(request, 'tgt-set');
+    const headers = auth(token);
+
+    const res = await request.put(`${API}/api/targets/brush`, { headers, data: { target: 5 } });
+    expect(res.status()).toBe(200);
+    expect(await res.json()).toMatchObject({ target: 5, default_target: 2, is_custom: true });
+
+    const summary = await (
+      await request.get(`${API}/api/summary?date=${TODAY}`, { headers })
+    ).json();
+    const brush = summary.modules.find((m: { key: string }) => m.key === 'brush');
+    expect(brush).toMatchObject({ target: 5, default_target: 2, is_custom_target: true });
+  });
+
+  test('yükseltilen hedef tamamlanmayı geri alır ve puanı düşürür', async ({ request }) => {
+    const { token } = await registerUser(request, 'tgt-recalc');
+    const headers = auth(token);
+
+    // Default brush target is 2 — hit it, then move the goalposts.
+    await request.put(`${API}/api/entries/brush?date=${TODAY}`, { headers, data: { value: 2 } });
+    const done = await (await request.get(`${API}/api/summary?date=${TODAY}`, { headers })).json();
+    expect(done.modules.find((m: { key: string }) => m.key === 'brush').completed).toBe(true);
+
+    await request.put(`${API}/api/targets/brush`, { headers, data: { target: 4 } });
+    const after = await (await request.get(`${API}/api/summary?date=${TODAY}`, { headers })).json();
+    const brush = after.modules.find((m: { key: string }) => m.key === 'brush');
+
+    expect(brush.completed).toBe(false);
+    expect(brush.ratio).toBeCloseTo(0.5, 5);
+    expect(after.score).toBeLessThan(done.score);
+  });
+
+  test('hedef varsayılana sıfırlanır', async ({ request }) => {
+    const { token } = await registerUser(request, 'tgt-reset');
+    const headers = auth(token);
+
+    await request.put(`${API}/api/targets/water`, { headers, data: { target: 12 } });
+    const res = await request.delete(`${API}/api/targets/water`, { headers });
+    expect(res.status()).toBe(200);
+    expect(await res.json()).toMatchObject({ target: 8, is_custom: false });
+
+    const targets = await (await request.get(`${API}/api/targets`, { headers })).json();
+    expect(targets.find((t: { key: string }) => t.key === 'water').is_custom).toBe(false);
+  });
+
+  test('geçersiz hedefler reddedilir', async ({ request }) => {
+    const { token } = await registerUser(request, 'tgt-invalid');
+    const headers = auth(token);
+
+    // Zero would make the completion ratio undefined.
+    for (const target of [0, -5]) {
+      const res = await request.put(`${API}/api/targets/water`, { headers, data: { target } });
+      expect(res.status()).toBe(422);
+    }
+    expect(
+      (await request.put(`${API}/api/targets/uydurma`, { headers, data: { target: 3 } })).status(),
+    ).toBe(404);
+  });
+
+  test('hedefler kullanıcıya özel', async ({ request }) => {
+    const a = await registerUser(request, 'tgt-iso-a');
+    const b = await registerUser(request, 'tgt-iso-b');
+
+    await request.put(`${API}/api/targets/water`, { headers: auth(a.token), data: { target: 20 } });
+
+    const targetsB = await (await request.get(`${API}/api/targets`, { headers: auth(b.token) })).json();
+    expect(targetsB.find((t: { key: string }) => t.key === 'water').target).toBe(8);
+  });
+
+  test('geçmiş grafiği de kişisel hedefi kullanır', async ({ request }) => {
+    const { token } = await registerUser(request, 'tgt-history');
+    const headers = auth(token);
+
+    await request.put(`${API}/api/targets/reading`, { headers, data: { target: 60 } });
+    const points = await (
+      await request.get(`${API}/api/history/reading?days=3&date=${TODAY}`, { headers })
+    ).json();
+
+    expect(points.every((p: { target: number }) => p.target === 60)).toBe(true);
+  });
+
+  test('tüm hedef uçları oturum ister', async ({ request }) => {
+    expect((await request.get(`${API}/api/targets`)).status()).toBe(401);
+    expect((await request.put(`${API}/api/targets/water`, { data: { target: 5 } })).status()).toBe(401);
+    expect((await request.delete(`${API}/api/targets/water`)).status()).toBe(401);
+  });
+});

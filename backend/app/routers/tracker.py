@@ -5,14 +5,26 @@ from pymongo import ReturnDocument
 
 from ..db import get_db
 from ..deps import current_user
-from ..models import DailySummary, EntryDelta, EntryValue, ModuleProgress
+from ..models import (
+    DailySummary,
+    EntryDelta,
+    EntryValue,
+    ModuleProgress,
+    ModuleTarget,
+    TargetUpdate,
+)
 from ..modules import MODULES, MODULES_BY_KEY, module_list
+from ..targets import custom_targets, effective_target
 
 router = APIRouter(prefix="/api", tags=["tracker"])
 
 
 def _entries():
     return get_db()["entries"]
+
+
+def _users():
+    return get_db()["users"]
 
 
 def _module_or_404(key: str):
@@ -34,6 +46,60 @@ async def list_modules(_user: dict = Depends(current_user)):
     return module_list()
 
 
+@router.get("/targets", response_model=list[ModuleTarget])
+async def list_targets(user: dict = Depends(current_user)):
+    overrides = custom_targets(user)
+    return [
+        ModuleTarget(
+            key=module.key,
+            title=module.title,
+            unit=module.unit,
+            target=overrides.get(module.key, module.target),
+            default_target=module.target,
+            is_custom=module.key in overrides,
+        )
+        for module in MODULES
+    ]
+
+
+@router.put("/targets/{module_key}", response_model=ModuleTarget)
+async def set_target(
+    module_key: str,
+    payload: TargetUpdate,
+    user: dict = Depends(current_user),
+):
+    module = _module_or_404(module_key)
+    await _users().update_one(
+        {"_id": user["_id"]},
+        {"$set": {f"targets.{module.key}": payload.target}},
+    )
+    return ModuleTarget(
+        key=module.key,
+        title=module.title,
+        unit=module.unit,
+        target=payload.target,
+        default_target=module.target,
+        is_custom=payload.target != module.target,
+    )
+
+
+@router.delete("/targets/{module_key}", response_model=ModuleTarget)
+async def reset_target(module_key: str, user: dict = Depends(current_user)):
+    module = _module_or_404(module_key)
+    await _users().update_one(
+        {"_id": user["_id"]},
+        {"$unset": {f"targets.{module.key}": ""}},
+    )
+    return ModuleTarget(
+        key=module.key,
+        title=module.title,
+        unit=module.unit,
+        target=module.target,
+        default_target=module.target,
+        is_custom=False,
+    )
+
+
 @router.get("/summary", response_model=DailySummary)
 async def daily_summary(
     date: date_type | None = None,
@@ -42,26 +108,28 @@ async def daily_summary(
     day = _resolve_date(date)
     cursor = _entries().find({"user_id": user["_id"], "date": day})
     values = {doc["module"]: doc["value"] async for doc in cursor}
+    overrides = custom_targets(user)
 
     progress: list[ModuleProgress] = []
     for module in MODULES:
         value = float(values.get(module.key, 0))
-        ratio = min(value / module.target, 1.0) if module.target else 0.0
+        target = overrides.get(module.key, module.target)
+        ratio = min(value / target, 1.0) if target else 0.0
         progress.append(
             ModuleProgress(
-                **{
-                    "key": module.key,
-                    "title": module.title,
-                    "icon": module.icon,
-                    "color": module.color,
-                    "unit": module.unit,
-                    "target": module.target,
-                    "step": module.step,
-                    "description": module.description,
-                    "value": value,
-                    "ratio": ratio,
-                    "completed": ratio >= 1.0,
-                }
+                key=module.key,
+                title=module.title,
+                icon=module.icon,
+                color=module.color,
+                unit=module.unit,
+                target=target,
+                default_target=module.target,
+                is_custom_target=module.key in overrides,
+                step=module.step,
+                description=module.description,
+                value=value,
+                ratio=ratio,
+                completed=ratio >= 1.0,
             )
         )
 
@@ -135,6 +203,7 @@ async def module_history(
     user: dict = Depends(current_user),
 ):
     module = _module_or_404(module_key)
+    target = effective_target(user, module)
     end = date_type.fromisoformat(_resolve_date(date))
     start = end - timedelta(days=days - 1)
 
@@ -153,7 +222,7 @@ async def module_history(
         {
             "date": (day := (start + timedelta(days=offset)).isoformat()),
             "value": float(values.get(day, 0)),
-            "target": module.target,
+            "target": target,
         }
         for offset in range(days)
     ]

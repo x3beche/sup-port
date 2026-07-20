@@ -53,6 +53,20 @@ class Entry(BaseModel):
     value: float
 
 
+class TargetUpdate(BaseModel):
+    # Zero would make the completion ratio undefined, so the floor is exclusive.
+    target: float = Field(gt=0, le=1_000_000)
+
+
+class ModuleTarget(BaseModel):
+    key: str
+    title: str
+    unit: str
+    target: float
+    default_target: float
+    is_custom: bool
+
+
 class ModuleProgress(BaseModel):
     key: str
     title: str
@@ -60,6 +74,8 @@ class ModuleProgress(BaseModel):
     color: str
     unit: str
     target: float
+    default_target: float
+    is_custom_target: bool
     step: float
     description: str
     value: float

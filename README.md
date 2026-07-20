@@ -10,16 +10,23 @@ modül ızgarası.
 
 ## Modüller
 
-| Modül | Hedef | Ne yapar |
+| Modül | Varsayılan hedef | Ne yapar |
 | --- | --- | --- |
-| 💧 Su | 8 bardak | Günlük su takibi |
-| 🥗 Beslenme | 3 öğün | Öğün kaydı |
-| 🪥 Diş Fırçalama | 2 kez | Sabah ve akşam rutini |
-| 📚 İngilizce | 20 dk | Kelime ve tekrar çalışması |
-| 👟 Adım | 8000 adım | Günlük hareket |
-| 😴 Uyku | 8 saat | Uyku süresi |
-| 📖 Okuma | 30 dk | Kitap okuma süresi |
-| 🧘 Meditasyon | 10 dk | Zihin dinginliği |
+| Su | 8 bardak | Günlük su takibi |
+| Beslenme | 3 öğün | Öğün kaydı |
+| Diş Fırçalama | 2 kez | Sabah ve akşam rutini |
+| İngilizce | 20 dk | Kelime ve tekrar çalışması |
+| Adım | 8000 adım | Günlük hareket |
+| Uyku | 8 saat | Uyku süresi |
+| Okuma | 30 dk | Kitap okuma süresi |
+| Meditasyon | 10 dk | Zihin dinginliği |
+
+Hedefler **kullanıcıya özel**: her modülün ekranından kendi hedefini belirleyebilir
+ya da varsayılana döndürebilirsin. Hedef değişince o günün tamamlanma durumu,
+günlük puan ve geçmiş grafiğinin eşiği birlikte yeniden hesaplanır.
+
+İkonlar emoji değil, `src/components/Icon.tsx` içinde tanımlı vektör çizimlerdir —
+platformdan bağımsız görünür ve modülün rengini alır.
 
 Yeni bir modül eklemek `backend/app/modules.py` içine tek bir satır eklemektir — API,
 günlük puan ve ana ekran ızgarası hepsi bu listeden beslenir.
@@ -99,6 +106,9 @@ sunulduğu LAN adresi kullanılır. Elle vermek için `EXPO_PUBLIC_API_URL` tan�
 | `POST /api/auth/login` | Giriş, token döner |
 | `GET /api/auth/me` | Oturumdaki kullanıcı |
 | `GET /api/modules` | Modül kaydı |
+| `GET /api/targets` | Kişisel hedefler (varsayılanla birlikte) |
+| `PUT /api/targets/{modül}` | Kendi hedefini belirle |
+| `DELETE /api/targets/{modül}` | Varsayılan hedefe dön |
 | `GET /api/summary?date=` | Günlük puan ve modül ilerlemeleri |
 | `PUT /api/entries/{modül}` | Değeri doğrudan ayarla |
 | `POST /api/entries/{modül}/add` | Değeri artır/azalt |
@@ -130,6 +140,7 @@ src/components/               ScoreRing, ModuleTile
 src/screens/                  Auth, Home, Module
 public/s23.html               S23 çerçeveli önizleme
 backend/app/modules.py        modül kaydı — yeni modül buraya
+backend/app/targets.py        kullanıcıya özel hedef çözümleme
 backend/app/routers/          auth, tracker
 tests/                        Playwright testleri
 ```
