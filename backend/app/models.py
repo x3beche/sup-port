@@ -1,40 +1,76 @@
-from datetime import datetime
-from enum import Enum
-from typing import Annotated, Any
+from datetime import date, datetime
+from typing import Annotated
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
+
+from .security import MAX_PASSWORD_BYTES
 
 # Mongo's ObjectId is not a JSON type, so serialise it as a string on the way out.
 ObjectIdStr = Annotated[str, BeforeValidator(str)]
 
 
-class Status(str, Enum):
-    open = "open"
-    pending = "pending"
-    closed = "closed"
+def _password_field(**kwargs):
+    return Field(min_length=8, max_length=MAX_PASSWORD_BYTES, **kwargs)
 
 
-class TicketCreate(BaseModel):
-    title: str = Field(min_length=1, max_length=200)
-    description: str = Field(default="", max_length=5000)
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str = _password_field()
+    name: str = Field(min_length=1, max_length=80)
 
 
-class TicketUpdate(BaseModel):
-    title: str | None = Field(default=None, min_length=1, max_length=200)
-    description: str | None = Field(default=None, max_length=5000)
-    status: Status | None = None
-
-    def changes(self) -> dict[str, Any]:
-        return self.model_dump(exclude_unset=True, exclude_none=True)
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=MAX_PASSWORD_BYTES)
 
 
-class Ticket(BaseModel):
+class User(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    # Reads Mongo's "_id" but serialises as "id" for the client.
     id: ObjectIdStr = Field(validation_alias="_id")
-    title: str
-    description: str
-    status: Status
+    email: EmailStr
+    name: str
     created_at: datetime
-    updated_at: datetime
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: User
+
+
+class EntryValue(BaseModel):
+    value: float = Field(ge=0, le=1_000_000)
+
+
+class EntryDelta(BaseModel):
+    delta: float = Field(default=0, ge=-1_000_000, le=1_000_000)
+
+
+class Entry(BaseModel):
+    module: str
+    date: date
+    value: float
+
+
+class ModuleProgress(BaseModel):
+    key: str
+    title: str
+    icon: str
+    color: str
+    unit: str
+    target: float
+    step: float
+    description: str
+    value: float
+    # Clamped at 1.0 so one overachieving module cannot mask the others.
+    ratio: float
+    completed: bool
+
+
+class DailySummary(BaseModel):
+    date: date
+    score: int
+    completed_count: int
+    module_count: int
+    modules: list[ModuleProgress]

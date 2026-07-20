@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from .config import settings
 from .db import close, connect, ping
-from .routers import tickets
+from .routers import auth, tracker
 
 
 @asynccontextmanager
@@ -17,7 +17,7 @@ async def lifespan(_app: FastAPI):
     await close()
 
 
-app = FastAPI(title="sup-port API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="sup-port API", version="0.2.0", lifespan=lifespan)
 
 # The Expo web client and the S23 both call this API from a different origin.
 app.add_middleware(
@@ -27,7 +27,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(tickets.router)
+app.include_router(auth.router)
+app.include_router(tracker.router)
 
 
 @app.get("/health")

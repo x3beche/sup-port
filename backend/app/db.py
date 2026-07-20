@@ -1,5 +1,5 @@
 import certifi
-from pymongo import AsyncMongoClient
+from pymongo import ASCENDING, AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase
 
 from .config import settings
@@ -20,7 +20,18 @@ async def connect() -> AsyncDatabase:
     )
     await _client.admin.command("ping")
     _db = _client[settings.db_name]
+    await _ensure_indexes(_db)
     return _db
+
+
+async def _ensure_indexes(db: AsyncDatabase) -> None:
+    # Two accounts on one email would make login ambiguous.
+    await db["users"].create_index([("email", ASCENDING)], unique=True)
+    # One row per user/module/day is what makes upserts idempotent.
+    await db["entries"].create_index(
+        [("user_id", ASCENDING), ("module", ASCENDING), ("date", ASCENDING)],
+        unique=True,
+    )
 
 
 def get_db() -> AsyncDatabase:

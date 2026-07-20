@@ -4,6 +4,9 @@ import { expect, test } from '@playwright/test';
 const S23_WIDTH = 360;
 const S23_HEIGHT = 780;
 
+// The app boots to the login screen, so this is what "loaded" looks like.
+const APP_MARKER = 'sup-port';
+
 test.describe('S23 çerçevesi', () => {
   test('çerçeve sayfası uygulamayı iframe içinde gösterir', async ({ page }) => {
     await page.goto('/s23.html');
@@ -15,8 +18,8 @@ test.describe('S23 çerçevesi', () => {
 
     // The app must actually be embedded, not merely linked.
     const frame = page.frameLocator('iframe');
-    await expect(frame.getByText('Hello World')).toBeVisible({ timeout: 30_000 });
-    await expect(frame.getByText('sup-port')).toBeVisible();
+    await expect(frame.getByText(APP_MARKER)).toBeVisible({ timeout: 30_000 });
+    await expect(frame.getByTestId('submit-auth')).toBeVisible();
   });
 
   test('iframe tam olarak S23 mantıksal çözünürlüğünde', async ({ page }) => {
@@ -24,9 +27,6 @@ test.describe('S23 çerçevesi', () => {
 
     const iframe = page.locator('iframe');
     await expect(iframe).toBeVisible();
-
-    const box = await iframe.boundingBox();
-    expect(box).not.toBeNull();
 
     // The stage scales down on short windows, so compare the unscaled layout size.
     const size = await iframe.evaluate((el) => ({
@@ -40,7 +40,7 @@ test.describe('S23 çerçevesi', () => {
     await page.goto('/s23.html');
 
     const frame = page.frameLocator('iframe');
-    await expect(frame.getByText('Hello World')).toBeVisible({ timeout: 30_000 });
+    await expect(frame.getByText(APP_MARKER)).toBeVisible({ timeout: 30_000 });
 
     const overflow = await page.locator('iframe').evaluate((el) => {
       const doc = (el as HTMLIFrameElement).contentDocument!;
@@ -56,7 +56,20 @@ test.describe('S23 çerçevesi', () => {
     // Guards the distinction that caused confusion: "/" is the bare app,
     // "/s23.html" is the framed view.
     await page.goto('/');
-    await expect(page.getByText('Hello World')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('submit-auth')).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('.phone')).toHaveCount(0);
+  });
+
+  test('koyu tema uygulanmış', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('submit-auth')).toBeVisible({ timeout: 30_000 });
+
+    const bg = await page.evaluate(() => {
+      const el = document.querySelector('#root > div') ?? document.body;
+      return getComputedStyle(el as Element).backgroundColor;
+    });
+    const [r, g, b] = bg.match(/\d+/g)!.map(Number);
+    // A light theme would sit near 255; anything this dark confirms the switch.
+    expect(Math.max(r, g, b)).toBeLessThan(60);
   });
 });

@@ -7,3 +7,6 @@
 
 mongodb_uri: mongodb+srv://<kullanici>:<parola>@<cluster>.mongodb.net/
 db_name: support
+
+# python3 -c "import secrets; print(secrets.token_urlsafe(48))" ile üret
+jwt_secret: <rastgele-uzun-bir-dize>

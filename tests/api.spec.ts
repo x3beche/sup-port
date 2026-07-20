@@ -1,57 +1,233 @@
-import { expect, test } from '@playwright/test';
+import { APIRequestContext, expect, test } from '@playwright/test';
 
 const API = process.env.API_URL ?? 'http://localhost:4000';
+const TODAY = '2026-07-20';
 
-test.describe('Backend API (FastAPI + MongoDB)', () => {
+function uniqueEmail(tag: string) {
+  return `pw-${tag}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`;
+}
+
+async function registerUser(request: APIRequestContext, tag: string) {
+  const email = uniqueEmail(tag);
+  const res = await request.post(`${API}/api/auth/register`, {
+    data: { email, password: 'parola12345', name: 'Playwright' },
+  });
+  expect(res.status()).toBe(201);
+  const body = await res.json();
+  return { email, token: body.access_token as string, user: body.user };
+}
+
+function auth(token: string) {
+  return { Authorization: `Bearer ${token}` };
+}
+
+test.describe('Sağlık', () => {
   test('/health MongoDB bağlantısını doğrular', async ({ request }) => {
     const res = await request.get(`${API}/health`);
     expect(res.status()).toBe(200);
     expect(await res.json()).toEqual({ status: 'ok', db: 'support' });
   });
+});
 
-  test('ticket yaşam döngüsü: oluştur, listele, güncelle, sil', async ({ request }) => {
-    const created = await request.post(`${API}/api/tickets`, {
-      data: { title: 'Playwright kaydı', description: 'otomatik test' },
-    });
-    expect(created.status()).toBe(201);
-
-    const ticket = await created.json();
-    expect(ticket).toMatchObject({
-      title: 'Playwright kaydı',
-      description: 'otomatik test',
-      status: 'open',
-    });
-    expect(ticket.id).toMatch(/^[a-f0-9]{24}$/);
-
-    try {
-      const list = await request.get(`${API}/api/tickets?limit=50`);
-      expect(list.status()).toBe(200);
-      const ids = (await list.json()).map((t: { id: string }) => t.id);
-      expect(ids).toContain(ticket.id);
-
-      const patched = await request.patch(`${API}/api/tickets/${ticket.id}`, {
-        data: { status: 'closed' },
-      });
-      expect(patched.status()).toBe(200);
-      const updated = await patched.json();
-      expect(updated.status).toBe('closed');
-      // Both timestamps must round-trip in the same shape (tz-aware UTC).
-      expect(updated.created_at).toMatch(/(Z|\+00:00)$/);
-      expect(updated.updated_at).toMatch(/(Z|\+00:00)$/);
-    } finally {
-      const removed = await request.delete(`${API}/api/tickets/${ticket.id}`);
-      expect(removed.status()).toBe(204);
-    }
-
-    const gone = await request.get(`${API}/api/tickets/${ticket.id}`);
-    expect(gone.status()).toBe(404);
+test.describe('Auth', () => {
+  test('kayıt token ve kullanıcı döner', async ({ request }) => {
+    const { token, user } = await registerUser(request, 'reg');
+    expect(token).toBeTruthy();
+    expect(user.id).toMatch(/^[a-f0-9]{24}$/);
+    expect(user).not.toHaveProperty('password_hash');
   });
 
-  test('geçersiz girdiler doğru hata kodlarını döner', async ({ request }) => {
-    expect((await request.get(`${API}/api/tickets/not-an-id`)).status()).toBe(400);
-    expect((await request.post(`${API}/api/tickets`, { data: { title: '' } })).status()).toBe(422);
-    expect(
-      (await request.patch(`${API}/api/tickets/507f1f77bcf86cd799439011`, { data: {} })).status(),
-    ).toBe(400);
+  test('aynı e-posta ikinci kez kaydedilemez', async ({ request }) => {
+    const { email } = await registerUser(request, 'dup');
+    const res = await request.post(`${API}/api/auth/register`, {
+      data: { email, password: 'parola12345', name: 'Tekrar' },
+    });
+    expect(res.status()).toBe(409);
+  });
+
+  test('doğru parola ile giriş, yanlışıyla 401', async ({ request }) => {
+    const { email } = await registerUser(request, 'login');
+
+    const ok = await request.post(`${API}/api/auth/login`, {
+      data: { email, password: 'parola12345' },
+    });
+    expect(ok.status()).toBe(200);
+    expect((await ok.json()).access_token).toBeTruthy();
+
+    const bad = await request.post(`${API}/api/auth/login`, {
+      data: { email, password: 'yanlisparola' },
+    });
+    expect(bad.status()).toBe(401);
+  });
+
+  test('bilinmeyen e-posta da 401 döner (hesap sızdırmaz)', async ({ request }) => {
+    const res = await request.post(`${API}/api/auth/login`, {
+      data: { email: uniqueEmail('ghost'), password: 'parola12345' },
+    });
+    expect(res.status()).toBe(401);
+    // Identical message to the wrong-password case, otherwise the response
+    // reveals which emails are registered.
+    expect((await res.json()).detail).toBe('E-posta veya parola hatalı');
+  });
+
+  test('kısa parola reddedilir', async ({ request }) => {
+    const res = await request.post(`${API}/api/auth/register`, {
+      data: { email: uniqueEmail('short'), password: 'kisa', name: 'Kısa' },
+    });
+    expect(res.status()).toBe(422);
+  });
+
+  test('/me tokensiz 401, tokenla kullanıcıyı döner', async ({ request }) => {
+    expect((await request.get(`${API}/api/auth/me`)).status()).toBe(401);
+
+    const { token, user } = await registerUser(request, 'me');
+    const res = await request.get(`${API}/api/auth/me`, { headers: auth(token) });
+    expect(res.status()).toBe(200);
+    expect((await res.json()).id).toBe(user.id);
+  });
+
+  test('bozuk token 401 döner', async ({ request }) => {
+    const res = await request.get(`${API}/api/auth/me`, {
+      headers: auth('bu.gecerli.bir.token.degil'),
+    });
+    expect(res.status()).toBe(401);
+  });
+});
+
+test.describe('Tracker', () => {
+  test('tüm tracker uçları oturum ister', async ({ request }) => {
+    for (const path of ['/api/modules', '/api/summary', '/api/history/water']) {
+      expect((await request.get(`${API}${path}`)).status()).toBe(401);
+    }
+    expect((await request.post(`${API}/api/entries/water/add`, { data: {} })).status()).toBe(401);
+  });
+
+  test('yeni kullanıcının günü sıfırdan başlar', async ({ request }) => {
+    const { token } = await registerUser(request, 'fresh');
+    const res = await request.get(`${API}/api/summary?date=${TODAY}`, { headers: auth(token) });
+    expect(res.status()).toBe(200);
+
+    const summary = await res.json();
+    expect(summary.score).toBe(0);
+    expect(summary.completed_count).toBe(0);
+    expect(summary.module_count).toBeGreaterThan(0);
+    expect(summary.modules.every((m: { value: number }) => m.value === 0)).toBe(true);
+  });
+
+  test('hedefe ulaşınca modül tamamlanır ve puan artar', async ({ request }) => {
+    const { token } = await registerUser(request, 'score');
+    const headers = auth(token);
+
+    const before = await (
+      await request.get(`${API}/api/summary?date=${TODAY}`, { headers })
+    ).json();
+    const water = before.modules.find((m: { key: string }) => m.key === 'water');
+
+    await request.put(`${API}/api/entries/water?date=${TODAY}`, {
+      headers,
+      data: { value: water.target },
+    });
+
+    const after = await (await request.get(`${API}/api/summary?date=${TODAY}`, { headers })).json();
+    const updated = after.modules.find((m: { key: string }) => m.key === 'water');
+
+    expect(updated.value).toBe(water.target);
+    expect(updated.completed).toBe(true);
+    expect(updated.ratio).toBe(1);
+    expect(after.score).toBeGreaterThan(before.score);
+    expect(after.completed_count).toBe(1);
+  });
+
+  test('hedefi aşmak oranı 1.0 üstüne çıkarmaz', async ({ request }) => {
+    const { token } = await registerUser(request, 'overshoot');
+    const headers = auth(token);
+
+    await request.put(`${API}/api/entries/water?date=${TODAY}`, {
+      headers,
+      data: { value: 999 },
+    });
+
+    const summary = await (
+      await request.get(`${API}/api/summary?date=${TODAY}`, { headers })
+    ).json();
+    const water = summary.modules.find((m: { key: string }) => m.key === 'water');
+
+    expect(water.value).toBe(999);
+    expect(water.ratio).toBe(1);
+    // One overachieving module must not carry the whole daily score.
+    expect(summary.score).toBeLessThan(100);
+  });
+
+  test('sayaç eksiye düşmez', async ({ request }) => {
+    const { token } = await registerUser(request, 'negative');
+    const headers = auth(token);
+
+    await request.post(`${API}/api/entries/water/add?date=${TODAY}`, {
+      headers,
+      data: { delta: 2 },
+    });
+    const res = await request.post(`${API}/api/entries/water/add?date=${TODAY}`, {
+      headers,
+      data: { delta: -50 },
+    });
+
+    expect(res.status()).toBe(200);
+    expect((await res.json()).value).toBe(0);
+  });
+
+  test('delta verilmezse modülün adımı kullanılır', async ({ request }) => {
+    const { token } = await registerUser(request, 'step');
+    const headers = auth(token);
+
+    const modules = await (await request.get(`${API}/api/modules`, { headers })).json();
+    const english = modules.find((m: { key: string }) => m.key === 'english');
+
+    const res = await request.post(`${API}/api/entries/english/add?date=${TODAY}`, {
+      headers,
+      data: {},
+    });
+    expect((await res.json()).value).toBe(english.step);
+  });
+
+  test('geçmiş boş günler dahil kesintisiz seri döner', async ({ request }) => {
+    const { token } = await registerUser(request, 'history');
+    const headers = auth(token);
+
+    await request.put(`${API}/api/entries/water?date=${TODAY}`, { headers, data: { value: 5 } });
+
+    const res = await request.get(`${API}/api/history/water?days=7&date=${TODAY}`, { headers });
+    const points = await res.json();
+
+    expect(points).toHaveLength(7);
+    expect(points[6]).toMatchObject({ date: TODAY, value: 5 });
+    // Days with no entry are real zeros, not gaps the chart has to guess at.
+    expect(points.slice(0, 6).every((p: { value: number }) => p.value === 0)).toBe(true);
+  });
+
+  test('kullanıcılar birbirinin verisini görmez', async ({ request }) => {
+    const a = await registerUser(request, 'iso-a');
+    const b = await registerUser(request, 'iso-b');
+
+    await request.put(`${API}/api/entries/water?date=${TODAY}`, {
+      headers: auth(a.token),
+      data: { value: 7 },
+    });
+
+    const summaryB = await (
+      await request.get(`${API}/api/summary?date=${TODAY}`, { headers: auth(b.token) })
+    ).json();
+    const waterB = summaryB.modules.find((m: { key: string }) => m.key === 'water');
+
+    expect(waterB.value).toBe(0);
+    expect(summaryB.score).toBe(0);
+  });
+
+  test('bilinmeyen modül 404 döner', async ({ request }) => {
+    const { token } = await registerUser(request, 'unknown');
+    const res = await request.post(`${API}/api/entries/uydurma/add`, {
+      headers: auth(token),
+      data: {},
+    });
+    expect(res.status()).toBe(404);
   });
 });

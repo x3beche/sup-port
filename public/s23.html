@@ -56,7 +56,8 @@
     height: var(--screen-h);
     border-radius: calc(var(--radius) - var(--bezel));
     overflow: hidden;
-    background: #fff;
+    /* Matches the app's dark theme so there is no white flash while it boots. */
+    background: #000;
   }
 
   .screen iframe {

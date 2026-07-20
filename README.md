@@ -2,29 +2,45 @@
 
 Kişisel gelişim için bir **superapp**. Tek bir uygulama içinde, alışkanlık ve gelişim
 alanlarının her biri kendi modülü olarak yer alır — hepsi ortak bir kabuk, ortak bir
-API ve ortak bir veri modeli üzerinde çalışır.
+API ve ortak bir puanlama üzerinde çalışır.
 
-> Durum: erken aşama. Şu an uygulama iskeleti, backend API'si ve test altyapısı hazır.
+Arayüz Samsung Health'in koyu temasından esinlenir: saf siyah zemin, yuvarlak koyu
+kartlar, tepede günlük puan halkası, altında iOS uygulama seçme ekranı tarzında
+modül ızgarası.
 
-## Planlanan modüller
+## Modüller
 
-| Modül | Ne yapar |
-| --- | --- |
-| 🍽️ Yemek | Öğün takibi, beslenme kaydı |
-| 🪥 Diş fırçalama | Günlük rutin takibi, hatırlatma |
-| 🇬🇧 İngilizce | Kelime çalışma, tekrar takibi |
-| ➕ … | Yeni alanlar aynı modül yapısıyla eklenir |
+| Modül | Hedef | Ne yapar |
+| --- | --- | --- |
+| 💧 Su | 8 bardak | Günlük su takibi |
+| 🥗 Beslenme | 3 öğün | Öğün kaydı |
+| 🪥 Diş Fırçalama | 2 kez | Sabah ve akşam rutini |
+| 📚 İngilizce | 20 dk | Kelime ve tekrar çalışması |
+| 👟 Adım | 8000 adım | Günlük hareket |
+| 😴 Uyku | 8 saat | Uyku süresi |
+| 📖 Okuma | 30 dk | Kitap okuma süresi |
+| 🧘 Meditasyon | 10 dk | Zihin dinginliği |
 
-Her modül aynı desende ilerler: kendi ekranı, kendi API uç noktaları, ortak kimlik ve
-ortak ilerleme takibi.
+Yeni bir modül eklemek `backend/app/modules.py` içine tek bir satır eklemektir — API,
+günlük puan ve ana ekran ızgarası hepsi bu listeden beslenir.
+
+**Günlük puan**, her modülün `değer / hedef` oranının 1.0'da kırpılmış ortalamasıdır.
+Kırpma bilinçli: tek bir modülde hedefi katlamak diğerlerinin eksiğini kapatamaz.
 
 ## Teknolojiler
 
 - **Mobil / web:** Expo SDK 57, React Native 0.86, React 19, TypeScript
-- **Backend:** FastAPI (Python 3.12), MongoDB Atlas
-- **Test:** Playwright
+- **Backend:** FastAPI (Python 3.12), MongoDB Atlas, JWT + bcrypt
+- **Test:** Playwright (API + arayüz)
 
 Hedef cihaz: Samsung Galaxy S23 (1080×2340, DPR 3 → 360×780 mantıksal px).
+
+### Oturum ve önbellek
+
+Her uç nokta oturum ister; token `Authorization: Bearer` başlığıyla gider ve cihazda
+saklanır. Veriler API'den gelir ama önce yereldeki kopya çizilir
+(*stale-while-revalidate*): uygulama açılışta anında dolu görünür, tazeleme arka
+planda olur. Ağ yoksa önbellekteki veri kalır ve üstte uyarı şeridi çıkar.
 
 ## Kurulum
 
@@ -34,10 +50,16 @@ Hedef cihaz: Samsung Galaxy S23 (1080×2340, DPR 3 → 360×780 mantıksal px).
 cp config.yaml.example config.yaml
 ```
 
-`config.yaml` içine kendi MongoDB bağlantı bilgilerini yaz. Bu dosya `.gitignore`
-içinde — gerçek kimlik bilgileri **asla** commit edilmez. Dilersen dosya yerine
-`MONGODB_URI` ve `DB_NAME` ortam değişkenlerini de kullanabilirsin; ortam
-değişkenleri dosyadaki değerleri geçersiz kılar.
+`config.yaml` içine MongoDB bilgilerini ve bir `jwt_secret` yaz. Bu dosya
+`.gitignore` içinde — gerçek kimlik bilgileri **asla** commit edilmez. Alternatif
+olarak `MONGODB_URI`, `DB_NAME`, `JWT_SECRET` ortam değişkenleri de kullanılabilir;
+ortam değişkenleri dosyadaki değerleri geçersiz kılar.
+
+Secret üretmek için:
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+```
 
 ### 2. Backend
 
@@ -50,7 +72,7 @@ python3 -m venv .venv
 
 - API: `http://localhost:4000`
 - Otomatik dokümantasyon: `http://localhost:4000/docs`
-- Sağlık kontrolü: `http://localhost:4000/health` (MongoDB'ye gerçek `ping` atar)
+- Sağlık kontrolü: `http://localhost:4000/health`
 
 ### 3. Uygulama
 
@@ -63,8 +85,27 @@ npx expo start
 - **S23 çerçeveli önizleme:** `http://localhost:8081/s23.html`
 - Cihazda: Expo Go ile aynı Wi-Fi ağından bağlan
 
-> Kök adres uygulamanın kendisini çerçevesiz gösterir. Telefon çerçevesi içinde
-> görmek için `/s23.html` adresini aç.
+> Kök adres uygulamayı çerçevesiz gösterir. Telefon çerçevesi içinde görmek için
+> `/s23.html` adresini aç.
+
+Uygulama API adresini kendisi bulur: web'de sayfanın host'u, cihazda Metro'nun
+sunulduğu LAN adresi kullanılır. Elle vermek için `EXPO_PUBLIC_API_URL` tanımla.
+
+## API
+
+| Uç nokta | Açıklama |
+| --- | --- |
+| `POST /api/auth/register` | Kayıt, token döner |
+| `POST /api/auth/login` | Giriş, token döner |
+| `GET /api/auth/me` | Oturumdaki kullanıcı |
+| `GET /api/modules` | Modül kaydı |
+| `GET /api/summary?date=` | Günlük puan ve modül ilerlemeleri |
+| `PUT /api/entries/{modül}` | Değeri doğrudan ayarla |
+| `POST /api/entries/{modül}/add` | Değeri artır/azalt |
+| `GET /api/history/{modül}?days=` | Kesintisiz günlük seri |
+
+`/health` dışındaki tüm uçlar oturum ister. Tarih parametresi istemcinin **yerel**
+takvim gününü taşır; gece 01:00'de girilen kayıt o güne yazılsın diye.
 
 ## Testler
 
@@ -73,26 +114,24 @@ npx playwright test          # tümü
 npx playwright test --ui     # arayüzle
 ```
 
-Testler `tests/` altında; Playwright'ın ürettiği çıktılar da `tests/.artifacts` ve
-`tests/.report` klasörlerine yazılır, proje kökü temiz kalır.
-
-API testleri çalışan bir backend bekler. Farklı adresler için `WEB_URL` ve `API_URL`
-ortam değişkenlerini kullanabilirsin.
+Testler `tests/` altında, Playwright çıktıları `tests/.artifacts` ve `tests/.report`
+klasörlerine yazılır. API testleri çalışan bir backend bekler. Farklı adresler için
+`WEB_URL` ve `API_URL` ortam değişkenlerini kullan.
 
 ## Proje yapısı
 
 ```
-App.tsx                     uygulama girişi
-public/s23.html             S23 çerçeveli önizleme sayfası
-backend/
-  app/config.py             config.yaml + ortam değişkeni okuma
-  app/db.py                 MongoDB bağlantısı
-  app/models.py             Pydantic modelleri
-  app/routers/tickets.py    CRUD uç noktaları
-  app/main.py               FastAPI uygulaması
-tests/
-  s23-frame.spec.ts         çerçeve ve ölçü testleri
-  api.spec.ts               backend uçtan uca testleri
+App.tsx                       kabuk ve ekran geçişi
+src/theme.ts                  koyu tema belirteçleri
+src/lib/api.ts                API istemcisi, adres çözümleme
+src/lib/useCachedQuery.ts     stale-while-revalidate önbellek
+src/context/AuthContext.tsx   oturum durumu
+src/components/               ScoreRing, ModuleTile
+src/screens/                  Auth, Home, Module
+public/s23.html               S23 çerçeveli önizleme
+backend/app/modules.py        modül kaydı — yeni modül buraya
+backend/app/routers/          auth, tracker
+tests/                        Playwright testleri
 ```
 
 ## Mimari notu
@@ -100,3 +139,6 @@ tests/
 Mobil uygulama MongoDB'ye **doğrudan bağlanmaz**. Tüm veri erişimi FastAPI katmanı
 üzerinden gider; aksi halde veritabanı kimlik bilgisi uygulama paketinin içine
 gömülür ve paketi açan herkes tarafından okunabilir.
+
+Auth şu an kendi JWT uygulamamız. Clerk/Auth0 gibi bir sağlayıcıya geçmek istenirse
+değişmesi gereken tek yer `backend/app/security.py` ve `backend/app/deps.py`.
