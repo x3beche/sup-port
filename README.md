@@ -1,5 +1,7 @@
 # sup-port
 
+[![CI](https://github.com/x3beche/sup-port/actions/workflows/ci.yml/badge.svg)](https://github.com/x3beche/sup-port/actions/workflows/ci.yml)
+
 Kişisel gelişim için bir **superapp**. Tek bir uygulama içinde, alışkanlık ve gelişim
 alanlarının her biri kendi modülü olarak yer alır — hepsi ortak bir kabuk, ortak bir
 API ve ortak bir puanlama üzerinde çalışır.
@@ -41,6 +43,15 @@ Kırpma bilinçli: tek bir modülde hedefi katlamak diğerlerinin eksiğini kapa
 - **Test:** Playwright (API + arayüz)
 
 Hedef cihaz: Samsung Galaxy S23 (1080×2340, DPR 3 → 360×780 mantıksal px).
+
+### Hareket
+
+Geçişler `src/components/ScreenTransition.tsx` üzerinden yürür: ekranlar sönümlenerek
+ve hafifçe kayarak girer, geri dönüşte kayma yönü tersine döner. Ana ekrandaki modül
+kutucukları sırayla yukarı süzülür, günlük puan halkası da sıfırdan hedefe doğru
+dolarken sayı ona eşlik eder. Süreler `theme.motion` içinde tek yerden yönetilir —
+160/240/420 ms ve `easeOutQuint` eğrisi; daha uzunu bir alışkanlık takipçisinde
+ağır hissettiriyor.
 
 ### Oturum ve önbellek
 
@@ -116,6 +127,20 @@ sunulduğu LAN adresi kullanılır. Elle vermek için `EXPO_PUBLIC_API_URL` tan�
 
 `/health` dışındaki tüm uçlar oturum ister. Tarih parametresi istemcinin **yerel**
 takvim gününü taşır; gece 01:00'de girilen kayıt o güne yazılsın diye.
+
+## Sürekli entegrasyon
+
+`.github/workflows/ci.yml` her push ve pull request'te çalışır:
+
+- **verify:** TypeScript tip kontrolü, kendi MongoDB servis konteynerini ayağa
+  kaldırır, backend ve web sunucusunu başlatır, Playwright testlerinin tamamını
+  koşar. Hata durumunda sunucu loglarını basar, test raporunu artefakt olarak yükler.
+- **secrets-guard:** `config.yaml`'ın depoya girmediğini, örnek dosyanın var
+  olduğunu ve takip edilen hiçbir dosyada canlı MongoDB bağlantı dizesi
+  bulunmadığını doğrular.
+
+CI Atlas'a bağlanmaz; kendi `mongo:7` servisini ve tek kullanımlık bir
+`JWT_SECRET` değerini kullanır, yani depoda hiçbir gerçek kimlik bilgisi gerekmez.
 
 ## Testler
 

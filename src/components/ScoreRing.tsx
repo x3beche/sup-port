@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { theme } from '../theme';
 
@@ -10,11 +10,35 @@ type Props = {
   caption?: string;
 };
 
+const EASE = Easing.bezier(...theme.motion.ease);
+
 export function ScoreRing({ score, size = 168, strokeWidth = 14, caption }: Props) {
-  const clamped = Math.max(0, Math.min(100, score));
+  const target = Math.max(0, Math.min(100, score));
+
+  // The arc and the number are driven off one value so they can never disagree.
+  // A listener re-renders instead of animating SVG props directly, which keeps
+  // the behaviour identical on web and native.
+  const progress = useRef(new Animated.Value(0)).current;
+  const [shown, setShown] = useState(0);
+
+  useEffect(() => {
+    const id = progress.addListener(({ value }) => setShown(value));
+    const animation = Animated.timing(progress, {
+      toValue: target,
+      duration: theme.motion.slow,
+      easing: EASE,
+      useNativeDriver: false,
+    });
+    animation.start();
+    return () => {
+      animation.stop();
+      progress.removeListener(id);
+    };
+  }, [progress, target]);
+
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const dashOffset = circumference * (1 - clamped / 100);
+  const dashOffset = circumference * (1 - shown / 100);
   const center = size / 2;
 
   return (
@@ -50,8 +74,8 @@ export function ScoreRing({ score, size = 168, strokeWidth = 14, caption }: Prop
       </Svg>
 
       <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">
-        <Text style={styles.score} accessibilityLabel={`Günlük puan ${clamped}`}>
-          {clamped}
+        <Text style={styles.score} accessibilityLabel={`Günlük puan ${target}`}>
+          {Math.round(shown)}
         </Text>
         {caption ? <Text style={styles.caption}>{caption}</Text> : null}
       </View>

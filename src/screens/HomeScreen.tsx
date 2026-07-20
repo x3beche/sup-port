@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { ModuleTile } from '../components/ModuleTile';
+import { StaggeredItem } from '../components/ScreenTransition';
 import { ScoreRing } from '../components/ScoreRing';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest, todayIso } from '../lib/api';
@@ -109,8 +110,10 @@ export function HomeScreen({ onOpenModule }: { onOpenModule: (m: ModuleProgress)
       </View>
 
       <View style={styles.grid} testID="module-grid">
-        {modules.map((module) => (
-          <ModuleTile key={module.key} module={module} onPress={onOpenModule} />
+        {modules.map((module, index) => (
+          <StaggeredItem key={module.key} index={index}>
+            <ModuleTile module={module} onPress={onOpenModule} />
+          </StaggeredItem>
         ))}
       </View>
     </ScrollView>

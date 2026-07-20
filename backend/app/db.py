@@ -8,15 +8,24 @@ _client: AsyncMongoClient | None = None
 _db: AsyncDatabase | None = None
 
 
+def _uses_tls(uri: str) -> bool:
+    # mongodb+srv:// implies TLS; a plain mongodb:// only uses it when asked.
+    # Passing tlsCAFile to a non-TLS connection is a configuration error, which
+    # is exactly what a local CI mongo container would hit.
+    lowered = uri.lower()
+    return lowered.startswith("mongodb+srv://") or "tls=true" in lowered or "ssl=true" in lowered
+
+
 async def connect() -> AsyncDatabase:
     global _client, _db
+    tls_options = {"tlsCAFile": certifi.where()} if _uses_tls(settings.mongo_uri) else {}
     _client = AsyncMongoClient(
         settings.mongo_uri,
         serverSelectionTimeoutMS=8000,
-        tlsCAFile=certifi.where(),
         # BSON has no timezone, so without this reads come back naive and the
         # client sees a different shape than the one POST returned.
         tz_aware=True,
+        **tls_options,
     )
     await _client.admin.command("ping")
     _db = _client[settings.db_name]

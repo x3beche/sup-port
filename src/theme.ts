@@ -49,4 +49,17 @@ export const theme = {
     label: 13,
     tiny: 11,
   },
+  motion: {
+    // Short enough to feel instant, long enough to read as motion rather than a
+    // jump. Anything past ~300ms starts feeling sluggish on a habit tracker.
+    fast: 160,
+    normal: 240,
+    slow: 420,
+    /** easeOutQuint — decelerates hard, the "expensive" feel. */
+    ease: [0.22, 1, 0.36, 1] as const,
+    /** Distance a screen travels while sliding in. */
+    slide: 28,
+    /** Delay between consecutive grid tiles in the stagger. */
+    stagger: 35,
+  },
 } as const;

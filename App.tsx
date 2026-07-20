@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, StyleSheet, View } from 'react-native';
+import { ScreenTransition } from './src/components/ScreenTransition';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -16,6 +17,18 @@ import type { ModuleProgress } from './src/types';
 function Shell() {
   const { token, initialising } = useAuth();
   const [openModule, setOpenModule] = useState<ModuleProgress | null>(null);
+  // Remembering how we got here is what lets "back" slide the other way.
+  const [goingBack, setGoingBack] = useState(false);
+
+  const openDetail = useCallback((module: ModuleProgress) => {
+    setGoingBack(false);
+    setOpenModule(module);
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    setGoingBack(true);
+    setOpenModule(null);
+  }, []);
 
   if (initialising) {
     return (
@@ -25,13 +38,28 @@ function Shell() {
     );
   }
 
-  if (!token) return <AuthScreen />;
-
-  if (openModule) {
-    return <ModuleScreen module={openModule} onBack={() => setOpenModule(null)} />;
+  if (!token) {
+    return (
+      <ScreenTransition key="auth" direction="fade">
+        <AuthScreen />
+      </ScreenTransition>
+    );
   }
 
-  return <HomeScreen onOpenModule={setOpenModule} />;
+  if (openModule) {
+    return (
+      // Keying on the module makes each open re-run the entrance animation.
+      <ScreenTransition key={`module-${openModule.key}`} direction="forward">
+        <ModuleScreen module={openModule} onBack={closeDetail} />
+      </ScreenTransition>
+    );
+  }
+
+  return (
+    <ScreenTransition key="home" direction={goingBack ? 'backward' : 'fade'}>
+      <HomeScreen onOpenModule={openDetail} />
+    </ScreenTransition>
+  );
 }
 
 export default function App() {
