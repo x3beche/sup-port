@@ -1,0 +1,9 @@
+# Bu dosyayı kopyalayıp kendi değerlerinle doldur:
+#   cp config.yaml.example config.yaml
+#
+# config.yaml gitignore'da — gerçek kimlik bilgilerini asla commit etme.
+# Alternatif olarak MONGODB_URI / DB_NAME ortam değişkenlerini tanımlayabilirsin;
+# ortam değişkenleri bu dosyadaki değerleri geçersiz kılar.
+
+mongodb_uri: mongodb+srv://<kullanici>:<parola>@<cluster>.mongodb.net/
+db_name: support

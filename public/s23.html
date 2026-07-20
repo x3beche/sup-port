@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>sup-port — Galaxy S23</title>
+<style>
+  :root {
+    --screen-w: 360px;   /* S23 logical viewport (1080 / DPR 3) */
+    --screen-h: 780px;   /* S23 logical viewport (2340 / DPR 3) */
+    --bezel: 12px;
+    --radius: 46px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: #16181d;
+    color: #c9ced8;
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 24px;
+  }
+
+  .stage {
+    transform-origin: top center;
+  }
+
+  /* Phone body */
+  .phone {
+    position: relative;
+    width: calc(var(--screen-w) + var(--bezel) * 2);
+    height: calc(var(--screen-h) + var(--bezel) * 2);
+    padding: var(--bezel);
+    border-radius: var(--radius);
+    background: linear-gradient(160deg, #3a3f47 0%, #23262b 40%, #2e3238 100%);
+    box-shadow:
+      0 0 0 1.5px #55595f,
+      0 24px 60px rgba(0, 0, 0, .55),
+      inset 0 0 0 1px rgba(255, 255, 255, .06);
+  }
+
+  /* Screen */
+  .screen {
+    position: relative;
+    width: var(--screen-w);
+    height: var(--screen-h);
+    border-radius: calc(var(--radius) - var(--bezel));
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .screen iframe {
+    width: var(--screen-w);
+    height: var(--screen-h);
+    border: 0;
+    display: block;
+  }
+
+  /* Punch-hole camera */
+  .camera {
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #0b0c0e;
+    box-shadow: inset 0 0 0 1px rgba(90, 120, 160, .5);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* Side buttons (right edge: volume up/down + power) */
+  .btn {
+    position: absolute;
+    right: -2.5px;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: linear-gradient(180deg, #4a4f57, #2b2e33);
+  }
+  .btn.vol-up  { top: 150px; height: 46px; }
+  .btn.vol-dn  { top: 206px; height: 46px; }
+  .btn.power   { top: 272px; height: 62px; }
+
+  .caption {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+    letter-spacing: .01em;
+    color: #7d848f;
+  }
+  .caption strong { color: #c9ced8; font-weight: 600; }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #3ddc84;
+    box-shadow: 0 0 8px #3ddc84;
+  }
+</style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="phone">
+      <div class="screen">
+        <div class="camera"></div>
+        <iframe src="/" title="sup-port app"></iframe>
+      </div>
+      <div class="btn vol-up"></div>
+      <div class="btn vol-dn"></div>
+      <div class="btn power"></div>
+    </div>
+  </div>
+
+  <div class="caption">
+    <span class="dot"></span>
+    <strong>Galaxy S23</strong>
+    <span>360 × 780 CSS px · 1080 × 2340 @ 3x</span>
+  </div>
+
+  <script>
+    // Shrink the phone to fit shorter windows without clipping.
+    const stage = document.getElementById('stage');
+    const naturalHeight = 780 + 12 * 2;
+    function fit() {
+      const available = window.innerHeight - 110;
+      const scale = Math.min(1, available / naturalHeight);
+      stage.style.transform = `scale(${scale})`;
+      stage.style.height = `${naturalHeight * scale}px`;
+    }
+    fit();
+    window.addEventListener('resize', fit);
+  </script>
+</body>
+</html>
