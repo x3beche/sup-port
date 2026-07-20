@@ -25,7 +25,13 @@ test.describe('Sağlık', () => {
   test('/health MongoDB bağlantısını doğrular', async ({ request }) => {
     const res = await request.get(`${API}/health`);
     expect(res.status()).toBe(200);
-    expect(await res.json()).toEqual({ status: 'ok', db: 'support' });
+
+    const body = await res.json();
+    // The database name is environment-specific (CI uses its own), so assert the
+    // connection is live rather than pinning the name.
+    expect(body.status).toBe('ok');
+    expect(typeof body.db).toBe('string');
+    expect(body.db.length).toBeGreaterThan(0);
   });
 });
 
