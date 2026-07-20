@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.errors import DuplicateKeyError
 
 from ..db import get_db
-from ..deps import current_user
+from ..deps import current_claims, current_user
 from ..models import AuthResponse, LoginRequest, RegisterRequest, User
-from ..security import create_access_token, hash_password, verify_password
+from ..revocation import revoke
+from ..security import TokenClaims, create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -54,3 +55,9 @@ async def login(payload: LoginRequest):
 @router.get("/me", response_model=User)
 async def me(user: dict = Depends(current_user)):
     return user
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(claims: TokenClaims = Depends(current_claims)):
+    """Bu oturumun token'ını iptal eder; diğer cihazlardaki oturumlar etkilenmez."""
+    await revoke(claims)

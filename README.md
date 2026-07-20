@@ -23,6 +23,11 @@ modül ızgarası.
 | Okuma | 30 dk | Kitap okuma süresi |
 | Meditasyon | 10 dk | Zihin dinginliği |
 
+Her modülün kendi **artış kademeleri** var (su +1/+2/+4, adım +500/+1000/+2500).
+Kullanıcının en çok dokunduğu kademe sayılır ve arayüzde en geniş alanı alır.
+Kutucuğa **basılı tutmak** modülü açmadan hızlı kayıt panelini açar; haftalık
+grafiğe basılı tutmak görünümü puan/tamamlanan arasında değiştirir.
+
 Hedefler **kullanıcıya özel**: her modülün ekranından kendi hedefini belirleyebilir
 ya da varsayılana döndürebilirsin. Hedef değişince o günün tamamlanma durumu,
 günlük puan ve geçmiş grafiğinin eşiği birlikte yeniden hesaplanır.
@@ -56,7 +61,13 @@ ağır hissettiriyor.
 ### Oturum ve önbellek
 
 Her uç nokta oturum ister; token `Authorization: Bearer` başlığıyla gider ve cihazda
-saklanır. Veriler API'den gelir ama önce yereldeki kopya çizilir
+saklanır. Çıkış yapmak token'ı **sunucu tarafında da iptal eder** (jti kara listesi,
+kayıtlar token'ın kendi son kullanma tarihinde TTL indeksiyle silinir) — aksi halde
+kopyalanmış bir token 30 gün boyunca hesabı değiştirebilirdi. Bir sekmede çıkış
+yapıldığında diğer sekmeler de düşer.
+
+Sayaç dokunuşları biriktirilip tek istekte gönderilir; ekrandan ayrılırken ya da
+sayfa kapanırken bekleyen kayıt `keepalive` ile yine de gönderilir. Veriler API'den gelir ama önce yereldeki kopya çizilir
 (*stale-while-revalidate*): uygulama açılışta anında dolu görünür, tazeleme arka
 planda olur. Ağ yoksa önbellekteki veri kalır ve üstte uyarı şeridi çıkar.
 
@@ -121,6 +132,8 @@ sunulduğu LAN adresi kullanılır. Elle vermek için `EXPO_PUBLIC_API_URL` tan�
 | `PUT /api/targets/{modül}` | Kendi hedefini belirle |
 | `DELETE /api/targets/{modül}` | Varsayılan hedefe dön |
 | `GET /api/summary?date=` | Günlük puan ve modül ilerlemeleri |
+| `GET /api/summary/week?days=` | Haftalık puan serisi (grafik için) |
+| `POST /api/auth/logout` | Oturumu sunucu tarafında iptal eder |
 | `PUT /api/entries/{modül}` | Değeri doğrudan ayarla |
 | `POST /api/entries/{modül}/add` | Değeri artır/azalt |
 | `GET /api/history/{modül}?days=` | Kesintisiz günlük seri |

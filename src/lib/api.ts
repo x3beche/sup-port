@@ -37,30 +37,71 @@ type RequestOptions = {
   body?: unknown;
   token?: string | null;
   signal?: AbortSignal;
+  /**
+   * Sayfa kapanırken/yenilenirken bile isteğin tamamlanmasını ister. Bekleyen
+   * bir kayıt, kullanıcı yenilediği anda sessizce kaybolmasın diye.
+   */
+  keepalive?: boolean;
 };
+
+/*
+ * Pydantic doğrulama metinleri İngilizce ve teknik: kullanıcı Türkçe bir
+ * arayüzde "value is not a valid email address: An email address must have an
+ * @-sign." görüyordu. Bilinen kalıplar Türkçeye çevriliyor, tanınmayanlar için
+ * alana göre genel bir mesaj veriliyor.
+ */
+const VALIDATION_MESSAGES: Array<{ match: RegExp; text: string }> = [
+  { match: /valid email address|@-sign/i, text: 'Geçerli bir e-posta adresi gir' },
+  { match: /email address is too long/i, text: 'E-posta adresi çok uzun' },
+  { match: /at least (\d+) character/i, text: 'Parola en az 8 karakter olmalı' },
+  { match: /greater than 0|greater_than/i, text: 'Değer sıfırdan büyük olmalı' },
+  { match: /less than or equal to/i, text: 'Değer izin verilen üst sınırın üstünde' },
+  { match: /string_too_long|too long/i, text: 'Girdiğin metin çok uzun' },
+  { match: /field required|missing/i, text: 'Zorunlu alan boş bırakılamaz' },
+];
+
+const FIELD_FALLBACKS: Record<string, string> = {
+  email: 'E-posta adresi geçersiz',
+  password: 'Parola geçersiz',
+  name: 'İsim geçersiz',
+  target: 'Hedef geçersiz',
+};
+
+function translateValidation(detail: Array<{ msg?: string; loc?: unknown[]; type?: string }>): string {
+  const first = detail[0];
+  const raw = `${first?.type ?? ''} ${first?.msg ?? ''}`;
+
+  for (const { match, text } of VALIDATION_MESSAGES) {
+    if (match.test(raw)) return text;
+  }
+
+  const field = Array.isArray(first?.loc) ? String(first.loc[first.loc.length - 1]) : '';
+  return FIELD_FALLBACKS[field] ?? 'Girdiğin bilgiler geçersiz';
+}
 
 function messageFrom(payload: unknown, fallback: string): string {
   if (typeof payload === 'string' && payload) return payload;
   if (payload && typeof payload === 'object') {
     const detail = (payload as { detail?: unknown }).detail;
+    // The API's own messages are already Turkish and user-facing.
     if (typeof detail === 'string') return detail;
-    // FastAPI validation errors arrive as a list of {loc, msg, ...}.
+    // FastAPI validation errors arrive as a list of {loc, msg, type}.
     if (Array.isArray(detail) && detail.length) {
-      const first = detail[0] as { msg?: string };
-      if (first?.msg) return first.msg;
+      return translateValidation(detail as Array<{ msg?: string; loc?: unknown[]; type?: string }>);
     }
   }
   return fallback;
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, token, signal } = options;
+  const { method = 'GET', body, token, signal, keepalive } = options;
 
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
       method,
       signal,
+      keepalive,
       headers: {
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -69,7 +110,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     });
   } catch (err) {
     if ((err as Error)?.name === 'AbortError') throw err;
-    throw new ApiError(`Sunucuya ulaşılamadı (${API_BASE})`, 0);
+    throw new ApiError('Sunucuya ulaşılamadı, bağlantını kontrol et', 0);
   }
 
   if (response.status === 204) return undefined as T;

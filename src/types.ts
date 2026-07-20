@@ -21,6 +21,9 @@ export type ModuleProgress = {
   default_target: number;
   is_custom_target: boolean;
   step: number;
+  steps: number[];
+  /** En çok dokunulan kademe; arayüzde en büyük alanı o alır. */
+  favorite_step: number;
   description: string;
   value: number;
   ratio: number;
@@ -48,4 +51,12 @@ export type HistoryPoint = {
   date: string;
   value: number;
   target: number;
+};
+
+export type WeekDay = {
+  date: string;
+  score: number;
+  completed_count: number;
+  module_count: number;
+  is_today: boolean;
 };

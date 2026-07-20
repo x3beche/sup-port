@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Platform, SafeAreaView, StyleSheet, View } from 'react-native';
 import { ScreenTransition } from './src/components/ScreenTransition';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { AuthScreen } from './src/screens/AuthScreen';
@@ -63,6 +63,14 @@ function Shell() {
 }
 
 export default function App() {
+  // Expo'nun ürettiği HTML lang="en" geliyor; ekran okuyucu Türkçe metni
+  // İngilizce ses motoruyla okuyordu (WCAG 3.1.1).
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.documentElement.lang = 'tr';
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <SafeAreaView style={styles.safeArea}>

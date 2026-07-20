@@ -41,6 +41,9 @@ async def _ensure_indexes(db: AsyncDatabase) -> None:
         [("user_id", ASCENDING), ("module", ASCENDING), ("date", ASCENDING)],
         unique=True,
     )
+    # Revoked tokens are only useful until they expire on their own, so Mongo
+    # drops each entry at its own expires_at instead of the list growing forever.
+    await db["revoked_tokens"].create_index("expires_at", expireAfterSeconds=0)
 
 
 def get_db() -> AsyncDatabase:

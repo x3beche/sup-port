@@ -100,6 +100,132 @@ test.describe('Auth', () => {
   });
 });
 
+test.describe('Oturum iptali', () => {
+  test('çıkış token’ı sunucu tarafında geçersiz kılar', async ({ request }) => {
+    const { token } = await registerUser(request, 'revoke');
+    const headers = auth(token);
+
+    expect((await request.get(`${API}/api/auth/me`, { headers })).status()).toBe(200);
+    expect((await request.post(`${API}/api/auth/logout`, { headers })).status()).toBe(204);
+
+    // A signed JWT stays cryptographically valid; the denylist is what ends it.
+    expect((await request.get(`${API}/api/auth/me`, { headers })).status()).toBe(401);
+    expect(
+      (await request.post(`${API}/api/entries/water/add?date=${TODAY}`, { headers, data: { delta: 5 } })).status(),
+    ).toBe(401);
+  });
+
+  test('bir oturumun iptali diğer oturumu etkilemez', async ({ request }) => {
+    const { email } = await registerUser(request, 'twosessions');
+    const second = await request.post(`${API}/api/auth/login`, {
+      data: { email, password: 'parola12345' },
+    });
+    const other = (await second.json()).access_token as string;
+
+    const first = await request.post(`${API}/api/auth/login`, {
+      data: { email, password: 'parola12345' },
+    });
+    const toRevoke = (await first.json()).access_token as string;
+
+    expect((await request.post(`${API}/api/auth/logout`, { headers: auth(toRevoke) })).status()).toBe(204);
+    expect((await request.get(`${API}/api/auth/me`, { headers: auth(toRevoke) })).status()).toBe(401);
+    // Signing out on the phone must not sign the user out on the tablet.
+    expect((await request.get(`${API}/api/auth/me`, { headers: auth(other) })).status()).toBe(200);
+  });
+
+  test('çıkış ucu oturum ister', async ({ request }) => {
+    expect((await request.post(`${API}/api/auth/logout`)).status()).toBe(401);
+  });
+});
+
+test.describe('Haftalık özet', () => {
+  test('istenen gün sayısı kadar kesintisiz seri döner', async ({ request }) => {
+    const { token } = await registerUser(request, 'week');
+    const headers = auth(token);
+
+    const res = await request.get(`${API}/api/summary/week?days=7&date=${TODAY}`, { headers });
+    expect(res.status()).toBe(200);
+
+    const days = await res.json();
+    expect(days).toHaveLength(7);
+    expect(days[6]).toMatchObject({ date: TODAY, is_today: true });
+    expect(days.slice(0, 6).every((d: { is_today: boolean }) => !d.is_today)).toBe(true);
+    expect(days.every((d: { score: number }) => d.score === 0)).toBe(true);
+  });
+
+  test('girilen değer o günün puanına yansır', async ({ request }) => {
+    const { token } = await registerUser(request, 'weekscore');
+    const headers = auth(token);
+
+    await request.put(`${API}/api/entries/water?date=${TODAY}`, { headers, data: { value: 8 } });
+    const days = await (
+      await request.get(`${API}/api/summary/week?days=7&date=${TODAY}`, { headers })
+    ).json();
+
+    expect(days[6].score).toBeGreaterThan(0);
+    expect(days[6].completed_count).toBe(1);
+  });
+
+  test('haftalık özet oturum ister', async ({ request }) => {
+    expect((await request.get(`${API}/api/summary/week`)).status()).toBe(401);
+  });
+});
+
+test.describe('Kademe kullanımı', () => {
+  test('modüller kendi kademe setini sunar', async ({ request }) => {
+    const { token } = await registerUser(request, 'stepsets');
+    const summary = await (
+      await request.get(`${API}/api/summary?date=${TODAY}`, { headers: auth(token) })
+    ).json();
+
+    const steps = summary.modules.find((m: { key: string }) => m.key === 'steps');
+    const brush = summary.modules.find((m: { key: string }) => m.key === 'brush');
+    expect(steps.steps).toEqual([500, 1000, 2500]);
+    expect(brush.steps).toEqual([1]);
+    expect(steps.favorite_step).toBe(steps.step);
+  });
+
+  test('en çok kullanılan kademe favori olur', async ({ request }) => {
+    const { token } = await registerUser(request, 'favstep');
+    const headers = auth(token);
+
+    for (let i = 0; i < 4; i++) {
+      await request.post(`${API}/api/entries/steps/add?date=${TODAY}&used_step=1000`, {
+        headers,
+        data: { delta: 1000 },
+      });
+    }
+    await request.post(`${API}/api/entries/steps/add?date=${TODAY}&used_step=500`, {
+      headers,
+      data: { delta: 500 },
+    });
+
+    const summary = await (
+      await request.get(`${API}/api/summary?date=${TODAY}`, { headers })
+    ).json();
+    expect(summary.modules.find((m: { key: string }) => m.key === 'steps').favorite_step).toBe(1000);
+  });
+
+  test('ondalıklı kademe de sayılır', async ({ request }) => {
+    const { token } = await registerUser(request, 'halfstep');
+    const headers = auth(token);
+
+    for (let i = 0; i < 2; i++) {
+      await request.post(`${API}/api/entries/sleep/add?date=${TODAY}&used_step=0.5`, {
+        headers,
+        data: { delta: 0.5 },
+      });
+    }
+
+    const summary = await (
+      await request.get(`${API}/api/summary?date=${TODAY}`, { headers })
+    ).json();
+    // Written as "0_5" and read back as "0_5"; an int/float mismatch silently
+    // broke this once.
+    expect(summary.modules.find((m: { key: string }) => m.key === 'sleep').favorite_step).toBe(0.5);
+  });
+});
+
 test.describe('Tracker', () => {
   test('tüm tracker uçları oturum ister', async ({ request }) => {
     for (const path of ['/api/modules', '/api/summary', '/api/history/water']) {

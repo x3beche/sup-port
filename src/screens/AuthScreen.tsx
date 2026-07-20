@@ -10,8 +10,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Icon } from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
-import { theme } from '../theme';
+import { onColor, theme } from '../theme';
 
 type Mode = 'login' | 'register';
 
@@ -37,6 +38,10 @@ export function AuthScreen() {
 
     if (!email.trim() || !password) {
       setError('E-posta ve parola zorunlu');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Geçerli bir e-posta adresi gir');
       return;
     }
     if (isRegister && !name.trim()) {
@@ -67,7 +72,7 @@ export function AuthScreen() {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.brand}>
           <View style={styles.logo}>
-            <Text style={styles.logoGlyph}>✦</Text>
+            <Icon name="check" size={26} strokeWidth={2.4} color={onColor(theme.color.accent)} />
           </View>
           <Text style={styles.appName}>sup-port</Text>
           <Text style={styles.tagline}>Kişisel gelişim, tek uygulamada</Text>
@@ -95,6 +100,7 @@ export function AuthScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="email"
             testID="input-email"
           />
 
@@ -105,12 +111,13 @@ export function AuthScreen() {
             placeholder={isRegister ? 'En az 8 karakter' : '••••••••'}
             secureTextEntry
             autoCapitalize="none"
+            autoComplete={isRegister ? 'new-password' : 'current-password'}
             testID="input-password"
             onSubmitEditing={submit}
           />
 
           {error ? (
-            <View style={styles.errorBox} testID="auth-error">
+            <View style={styles.errorBox} testID="auth-error" accessibilityRole="alert">
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -127,7 +134,7 @@ export function AuthScreen() {
             ]}
           >
             {busy ? (
-              <ActivityIndicator color={theme.color.onAccent} />
+              <ActivityIndicator color={onColor(theme.color.accent)} />
             ) : (
               <Text style={styles.primaryButtonText}>
                 {isRegister ? 'Kaydol' : 'Giriş yap'}
@@ -135,7 +142,13 @@ export function AuthScreen() {
             )}
           </Pressable>
 
-          <Pressable onPress={switchMode} testID="toggle-auth-mode" style={styles.switchRow}>
+          <Pressable
+            onPress={switchMode}
+            testID="toggle-auth-mode"
+            accessibilityRole="button"
+            accessibilityLabel={isRegister ? 'Giriş yap ekranına geç' : 'Hesap oluştur ekranına geç'}
+            style={styles.switchRow}
+          >
             <Text style={styles.switchText}>
               {isRegister ? 'Zaten hesabın var mı? ' : 'Hesabın yok mu? '}
               <Text style={styles.switchLink}>{isRegister ? 'Giriş yap' : 'Kaydol'}</Text>
@@ -152,9 +165,13 @@ type FieldProps = React.ComponentProps<typeof TextInput> & { label: string };
 function Field({ label, style, ...props }: FieldProps) {
   return (
     <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldLabel} nativeID={`label-${props.testID}`}>
+        {label}
+      </Text>
       <TextInput
         {...props}
+        accessibilityLabel={label}
+        aria-labelledby={`label-${props.testID}`}
         style={[styles.input, style]}
         placeholderTextColor={theme.color.textFaint}
       />
@@ -182,7 +199,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: theme.space(3),
   },
-  logoGlyph: { fontSize: 28, color: theme.color.onAccent, lineHeight: 34 },
+  
   appName: {
     fontSize: 26,
     fontWeight: '800',
@@ -198,7 +215,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.card,
     borderRadius: theme.radius.lg,
     padding: theme.space(5),
-    ...theme.shadow.card,
   },
   cardTitle: {
     fontSize: theme.font.title,
@@ -208,12 +224,11 @@ const styles = StyleSheet.create({
   },
   field: { marginBottom: theme.space(4) },
   fieldLabel: {
-    fontSize: theme.font.tiny,
-    fontWeight: '700',
+    fontSize: theme.font.caption,
+    fontWeight: '600',
     color: theme.color.textMuted,
     marginBottom: theme.space(1.5),
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
   input: {
     borderWidth: 1,
@@ -223,7 +238,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.space(3),
     fontSize: theme.font.body,
     color: theme.color.text,
-    backgroundColor: theme.color.inputBg,
+    backgroundColor: theme.color.cardRaised,
   },
   errorBox: {
     backgroundColor: theme.color.errorBg,
@@ -247,12 +262,14 @@ const styles = StyleSheet.create({
   buttonBusy: { opacity: 0.75 },
   pressed: { opacity: 0.85 },
   primaryButtonText: {
-    color: theme.color.onAccent,
+    color: onColor(theme.color.accent),
     fontSize: theme.font.body,
     fontWeight: '700',
   },
   switchRow: {
     marginTop: theme.space(4),
+    minHeight: 44,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   switchText: {

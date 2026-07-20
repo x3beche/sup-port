@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,25 +11,19 @@ import {
 import { ModuleTile } from '../components/ModuleTile';
 import { StaggeredItem } from '../components/ScreenTransition';
 import { ScoreRing } from '../components/ScoreRing';
+import { StepPad } from '../components/StepPad';
+import { WeeklyChart } from '../components/WeeklyChart';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest, todayIso } from '../lib/api';
 import { useCachedQuery } from '../lib/useCachedQuery';
-import { theme } from '../theme';
-import type { DailySummary, ModuleProgress } from '../types';
+import { tabularNums, theme } from '../theme';
+import type { DailySummary, ModuleProgress, WeekDay } from '../types';
 
 const DATE_FORMAT: Intl.DateTimeFormatOptions = {
   day: 'numeric',
   month: 'long',
   weekday: 'long',
 };
-
-function scoreCaption(score: number): string {
-  if (score >= 90) return 'mükemmel';
-  if (score >= 70) return 'çok iyi';
-  if (score >= 40) return 'devam et';
-  if (score > 0) return 'başlangıç';
-  return 'hadi başla';
-}
 
 export function HomeScreen({ onOpenModule }: { onOpenModule: (m: ModuleProgress) => void }) {
   const { user, token, logout } = useAuth();
@@ -44,6 +38,48 @@ export function HomeScreen({ onOpenModule }: { onOpenModule: (m: ModuleProgress)
   const { data, loading, refreshing, error, fromCache, refresh } = useCachedQuery<DailySummary>(
     token ? `summary:${today}` : null,
     fetcher,
+  );
+
+  const weekFetcher = useCallback(
+    (signal: AbortSignal) =>
+      apiRequest<WeekDay[]>(`/api/summary/week?days=7&date=${today}`, { token, signal }),
+    [token, today],
+  );
+
+  const { data: week, refresh: refreshWeek } = useCachedQuery<WeekDay[]>(
+    token ? `week:${today}` : null,
+    weekFetcher,
+  );
+
+  const [quickAdd, setQuickAdd] = useState<ModuleProgress | null>(null);
+
+  const openQuickAdd = useCallback((module: ModuleProgress) => {
+    setQuickAdd((current) => (current?.key === module.key ? null : module));
+  }, []);
+
+  const quickChange = useCallback(
+    async (delta: number, step: number) => {
+      if (!quickAdd) return;
+
+      // Optimistic so the pad feels the same as inside the module.
+      setQuickAdd((prev) => {
+        if (!prev) return prev;
+        const value = Math.max(0, prev.value + delta);
+        const ratio = prev.target ? Math.min(value / prev.target, 1) : 0;
+        return { ...prev, value, ratio, completed: ratio >= 1 };
+      });
+
+      try {
+        await apiRequest(
+          `/api/entries/${quickAdd.key}/add?date=${today}&used_step=${step}`,
+          { method: 'POST', body: { delta }, token },
+        );
+      } finally {
+        // The score, the grid and the week all move with a single entry.
+        await Promise.all([refresh(), refreshWeek()]);
+      }
+    },
+    [quickAdd, refresh, refreshWeek, today, token],
   );
 
   const prettyDate = useMemo(() => {
@@ -86,46 +122,65 @@ export function HomeScreen({ onOpenModule }: { onOpenModule: (m: ModuleProgress)
       </View>
 
       {error ? (
-        <View style={styles.banner} testID="home-error">
+        <View style={styles.banner} testID="home-error" accessibilityRole="alert">
           <Text style={styles.bannerText}>
             {fromCache || data ? `Çevrimdışı veriler gösteriliyor — ${error}` : error}
           </Text>
         </View>
       ) : null}
 
+      {/* The ring already states the score; a second copy underneath only
+          competed with it, so the card carries one number and one fact. */}
       <View style={styles.scoreCard} testID="score-card">
-        <Text style={styles.sectionEyebrow}>GÜNÜN ÖZETİ</Text>
-        <ScoreRing score={data?.score ?? 0} caption={scoreCaption(data?.score ?? 0)} />
-
-        <View style={styles.statRow}>
-          <Stat value={`${data?.completed_count ?? 0}/${data?.module_count ?? 0}`} label="Tamamlanan" />
-          <View style={styles.statDivider} />
-          <Stat value={`${data?.score ?? 0}%`} label="Günlük puan" />
-        </View>
+        <ScoreRing score={data?.score ?? 0} />
+        <Text style={styles.scoreStat}>
+          <Text style={styles.scoreStatValue}>
+            {data?.completed_count ?? 0}/{data?.module_count ?? 0}
+          </Text>{' '}
+          tamamlandı
+        </Text>
       </View>
 
-      <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>Uygulamalar</Text>
-        <Text style={styles.sectionCount}>{modules.length}</Text>
-      </View>
+      {week?.length ? <WeeklyChart days={week} /> : null}
+
+      <Text style={styles.sectionTitle}>Uygulamalar</Text>
 
       <View style={styles.grid} testID="module-grid">
         {modules.map((module, index) => (
           <StaggeredItem key={module.key} index={index}>
-            <ModuleTile module={module} onPress={onOpenModule} />
+            <ModuleTile
+              module={module}
+              onPress={onOpenModule}
+              onLongPress={openQuickAdd}
+              active={quickAdd?.key === module.key}
+            />
           </StaggeredItem>
         ))}
       </View>
-    </ScrollView>
-  );
-}
 
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <View style={styles.stat}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
+      {/* Long-press keeps the common case — log today's value — on the home
+          screen instead of costing a round trip into the module and back. */}
+      {quickAdd ? (
+        <View style={styles.quickAdd} testID="quick-add">
+          <View style={styles.quickHead}>
+            <Text style={styles.quickTitle}>{quickAdd.title}</Text>
+            <Pressable
+              onPress={() => setQuickAdd(null)}
+              testID="quick-add-close"
+              accessibilityRole="button"
+              accessibilityLabel="Hızlı kaydı kapat"
+              style={styles.quickClose}
+            >
+              <Text style={styles.quickCloseText}>Kapat</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.quickValue} testID="quick-add-value">
+            {quickAdd.value} / {quickAdd.target} {quickAdd.unit}
+          </Text>
+          <StepPad module={quickAdd} onChange={quickChange} compact />
+        </View>
+      ) : null}
+    </ScrollView>
   );
 }
 
@@ -150,7 +205,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: theme.font.title,
-    fontWeight: '800',
+    fontWeight: '700',
     color: theme.color.text,
     letterSpacing: -0.4,
   },
@@ -158,18 +213,18 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontSize: theme.font.label,
     color: theme.color.textMuted,
-    textTransform: 'capitalize',
   },
   logout: {
-    paddingHorizontal: theme.space(3),
-    paddingVertical: theme.space(2),
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: theme.space(4),
     borderRadius: theme.radius.pill,
     backgroundColor: theme.color.card,
     borderWidth: 1,
     borderColor: theme.color.border,
   },
   logoutText: {
-    fontSize: theme.font.tiny,
+    fontSize: theme.font.caption,
     fontWeight: '700',
     color: theme.color.textMuted,
   },
@@ -180,7 +235,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.space(4),
   },
   bannerText: {
-    fontSize: theme.font.tiny,
+    fontSize: theme.font.caption,
     color: theme.color.warnText,
     fontWeight: '600',
   },
@@ -190,54 +245,56 @@ const styles = StyleSheet.create({
     paddingVertical: theme.space(6),
     paddingHorizontal: theme.space(5),
     alignItems: 'center',
-    ...theme.shadow.card,
   },
-  sectionEyebrow: {
-    fontSize: theme.font.tiny,
-    fontWeight: '800',
-    color: theme.color.textFaint,
-    letterSpacing: 1,
-    marginBottom: theme.space(4),
-  },
-  statRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: theme.space(5),
-    alignSelf: 'stretch',
-  },
-  stat: { flex: 1, alignItems: 'center' },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: theme.color.border,
-  },
-  statValue: {
-    fontSize: theme.font.body + 2,
-    fontWeight: '800',
-    color: theme.color.text,
-  },
-  statLabel: {
-    marginTop: 2,
-    fontSize: theme.font.tiny,
+  scoreStat: {
+    marginTop: theme.space(4),
+    fontSize: theme.font.label,
     color: theme.color.textMuted,
-    fontWeight: '600',
   },
-  sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  scoreStatValue: {
+    fontSize: theme.font.heading,
+    fontWeight: '700',
+    color: theme.color.text,
+    ...tabularNums,
+  },
+  sectionTitle: {
+    fontSize: theme.font.heading,
+    fontWeight: '700',
+    color: theme.color.text,
     marginTop: theme.space(7),
     marginBottom: theme.space(4),
   },
-  sectionTitle: {
-    fontSize: theme.font.body + 2,
-    fontWeight: '800',
+  quickAdd: {
+    marginTop: theme.space(6),
+    backgroundColor: theme.color.card,
+    borderRadius: theme.radius.lg,
+    padding: theme.space(5),
+  },
+  quickHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  quickTitle: {
+    fontSize: theme.font.heading,
+    fontWeight: '700',
     color: theme.color.text,
   },
-  sectionCount: {
+  quickClose: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: theme.space(3),
+  },
+  quickCloseText: {
     fontSize: theme.font.label,
     fontWeight: '700',
-    color: theme.color.textFaint,
+    color: theme.color.accent,
+  },
+  quickValue: {
+    marginTop: theme.space(1),
+    fontSize: theme.font.label,
+    color: theme.color.textMuted,
+    ...tabularNums,
   },
   grid: {
     flexDirection: 'row',

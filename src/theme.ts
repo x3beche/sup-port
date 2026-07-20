@@ -1,7 +1,10 @@
 /**
- * Samsung Health'in koyu temasından esinlenen tasarım belirteçleri: neredeyse
- * siyah zemin, hafif yükseltilmiş koyu gri kartlar, yüksek kontrastlı metin ve
- * modül başına canlı kategori rengi.
+ * Samsung Health'in koyu temasından esinlenen tasarım belirteçleri: saf siyah
+ * zemin, hafif açık gri kartlar, yüksek kontrastlı metin ve modül başına canlı
+ * kategori rengi.
+ *
+ * Renkler WCAG'e göre seçildi: metin kart üstünde >= 4.5:1, grafik/ikon >= 3:1.
+ * Doğrulama testi: tests/contrast.spec.ts
  */
 export const theme = {
   color: {
@@ -10,19 +13,17 @@ export const theme = {
     cardRaised: '#242427',
     text: '#FFFFFF',
     textMuted: '#A1A1A6',
-    textFaint: '#6E6E73',
+    textFaint: '#8A8A8F',
     accent: '#00C2F0',
     accentSoft: '#0E2A33',
     border: '#2C2C2E',
     track: '#2C2C2E',
     success: '#3DD68C',
     danger: '#FF6B81',
-    inputBg: '#12151A',
     errorBg: '#2A1319',
     warnBg: '#2A2113',
     warnText: '#E9B949',
     successBg: '#12271E',
-    onAccent: '#04141A',
   },
   radius: {
     sm: 10,
@@ -31,22 +32,14 @@ export const theme = {
     pill: 999,
   },
   space: (n: number) => n * 4,
-  shadow: {
-    // Shadows read as almost nothing on a dark canvas, so depth comes from the
-    // card being lighter than the background rather than from a drop shadow.
-    card: {
-      shadowColor: '#000000',
-      shadowOpacity: 0.35,
-      shadowRadius: 14,
-      shadowOffset: { width: 0, height: 6 },
-      elevation: 3,
-    },
-  },
   font: {
+    hero: 46,
     display: 34,
     title: 20,
+    heading: 17,
     body: 15,
     label: 13,
+    caption: 12,
     tiny: 11,
   },
   motion: {
@@ -63,3 +56,35 @@ export const theme = {
     stagger: 35,
   },
 } as const;
+
+/** Rakamların sayarken titrememesi için sabit genişlikli basamaklar. */
+export const tabularNums = { fontVariant: ['tabular-nums' as const] };
+
+function relativeLuminance(hex: string): number {
+  const value = hex.replace('#', '');
+  const channels = [0, 2, 4].map((i) => {
+    const c = parseInt(value.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+export function contrastRatio(a: string, b: string): number {
+  const [light, dark] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+const ON_DARK = '#FFFFFF';
+const ON_LIGHT = '#0A0A0B';
+
+/**
+ * Renkli bir zemin üstünde okunacak metin/ikon rengi. Sabit bir "onAccent"
+ * değeri modül renkleri arasında dolaşınca kontrastı tutturamıyordu. Parlaklık
+ * eşiği de yetmiyor: orta tonlarda (Uyku, Meditasyon) eşiğin doğru tarafı bile
+ * 4.5:1'i geçmiyordu. Bu yüzden iki adaydan kontrastı yüksek olan seçiliyor.
+ */
+export function onColor(background: string): string {
+  return contrastRatio(ON_LIGHT, background) >= contrastRatio(ON_DARK, background)
+    ? ON_LIGHT
+    : ON_DARK;
+}

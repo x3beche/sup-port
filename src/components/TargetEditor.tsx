@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { theme } from '../theme';
+import { onColor, tabularNums, theme } from '../theme';
 import type { ModuleProgress } from '../types';
 
+const NUMBER_FORMAT = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 });
+
 function formatValue(value: number): string {
-  return Number.isInteger(value) ? String(value) : String(value);
+  return NUMBER_FORMAT.format(value);
+}
+
+// Düzenleme alanı ham sayı ister: "8.000" tekrar ayrıştırılamaz.
+function rawValue(value: number): string {
+  return String(value);
 }
 
 type Props = {
@@ -15,12 +22,12 @@ type Props = {
 
 export function TargetEditor({ module, onSave, onReset }: Props) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(String(module.target));
+  const [draft, setDraft] = useState(rawValue(module.target));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function open() {
-    setDraft(formatValue(module.target));
+    setDraft(rawValue(module.target));
     setError(null);
     setEditing(true);
   }
@@ -30,6 +37,11 @@ export function TargetEditor({ module, onSave, onReset }: Props) {
     const parsed = Number(draft.replace(',', '.'));
     if (!Number.isFinite(parsed) || parsed <= 0) {
       setError('Hedef sıfırdan büyük bir sayı olmalı');
+      return;
+    }
+    // Matches the server's ceiling, so the user is not told in English.
+    if (parsed > 1_000_000) {
+      setError('Hedef çok büyük');
       return;
     }
 
@@ -80,7 +92,7 @@ export function TargetEditor({ module, onSave, onReset }: Props) {
 
   return (
     <View style={styles.editor} testID="target-editor">
-      <Text style={styles.rowLabel}>GÜNLÜK HEDEF</Text>
+      <Text style={styles.rowLabel}>GÜNLÜK HEDEF ({module.unit})</Text>
 
       <View style={styles.inputRow}>
         <TextInput
@@ -90,15 +102,15 @@ export function TargetEditor({ module, onSave, onReset }: Props) {
           autoFocus
           selectTextOnFocus
           testID="target-input"
+          accessibilityLabel={`Günlük hedef, ${module.unit}`}
           style={styles.input}
           placeholderTextColor={theme.color.textFaint}
           onSubmitEditing={save}
         />
-        <Text style={styles.unit}>{module.unit}</Text>
       </View>
 
       {error ? (
-        <Text style={styles.error} testID="target-error">
+        <Text style={styles.error} testID="target-error" accessibilityRole="alert">
           {error}
         </Text>
       ) : null}
@@ -108,6 +120,8 @@ export function TargetEditor({ module, onSave, onReset }: Props) {
           onPress={() => setEditing(false)}
           disabled={busy}
           testID="target-cancel"
+          accessibilityRole="button"
+          accessibilityLabel="İptal"
           style={({ pressed }) => [styles.button, styles.ghost, pressed && styles.pressed]}
         >
           <Text style={styles.ghostLabel}>İptal</Text>
@@ -116,6 +130,8 @@ export function TargetEditor({ module, onSave, onReset }: Props) {
           onPress={save}
           disabled={busy}
           testID="target-save"
+          accessibilityRole="button"
+          accessibilityLabel="Hedefi kaydet"
           style={({ pressed }) => [
             styles.button,
             { backgroundColor: module.color },
@@ -124,15 +140,17 @@ export function TargetEditor({ module, onSave, onReset }: Props) {
           ]}
         >
           {busy ? (
-            <ActivityIndicator color={theme.color.onAccent} />
+            <ActivityIndicator color={onColor(module.color)} />
           ) : (
-            <Text style={styles.saveLabel}>Kaydet</Text>
+            <Text style={[styles.saveLabel, { color: onColor(module.color) }]}>Kaydet</Text>
           )}
         </Pressable>
       </View>
 
       {module.is_custom_target ? (
-        <Pressable onPress={reset} disabled={busy} testID="target-reset" style={styles.resetRow}>
+        <Pressable onPress={reset} disabled={busy} testID="target-reset"
+          accessibilityRole="button"
+          accessibilityLabel="Varsayılan hedefe dön" style={styles.resetRow}>
           <Text style={styles.resetText}>
             Varsayılana dön ({formatValue(module.default_target)} {module.unit})
           </Text>
@@ -194,17 +212,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.color.border,
     borderRadius: theme.radius.md,
-    backgroundColor: theme.color.inputBg,
+    backgroundColor: theme.color.cardRaised,
     paddingHorizontal: theme.space(4),
     paddingVertical: theme.space(3),
     fontSize: theme.font.title,
     fontWeight: '800',
     color: theme.color.text,
-  },
-  unit: {
-    fontSize: theme.font.body,
-    fontWeight: '600',
-    color: theme.color.textMuted,
+    ...tabularNums,
   },
   error: {
     marginTop: theme.space(2),
@@ -239,10 +253,12 @@ const styles = StyleSheet.create({
   saveLabel: {
     fontSize: theme.font.body,
     fontWeight: '800',
-    color: theme.color.onAccent,
+    color: theme.color.text,
   },
   resetRow: {
     marginTop: theme.space(3),
+    minHeight: 44,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   resetText: {

@@ -22,3 +22,32 @@ def custom_targets(user: dict) -> dict[str, float]:
 
 def effective_target(user: dict, module: Module) -> float:
     return custom_targets(user).get(module.key, module.target)
+
+
+def favorite_step(user: dict, module: Module) -> float:
+    """Kullanıcının o modülde en çok dokunduğu kademe; hiç yoksa varsayılan."""
+    usage = (user.get("step_usage") or {}).get(module.key)
+    options = module.step_options()
+    if not isinstance(usage, dict) or not usage:
+        return module.step
+
+    def score(option: float) -> int:
+        raw = usage.get(_usage_key(option))
+        return raw if isinstance(raw, int) else 0
+
+    best = max(options, key=score)
+    return best if score(best) > 0 else module.step
+
+
+def _usage_key(step: float) -> str:
+    """Kademeyi Mongo alan adına çevirir.
+
+    Her zaman float üzerinden üretilir: kayıt sırasında 2500.0, okuma sırasında
+    2500 gelirse iki farklı anahtar oluşur ve sayaç hiç eşleşmez.
+    Mongo alan adları nokta içeremediği için ayraç alt çizgidir: 0.5 -> "0_5".
+    """
+    return str(float(step)).replace(".", "_")
+
+
+def usage_field(module_key: str, step: float) -> str:
+    return f"step_usage.{module_key}.{_usage_key(step)}"

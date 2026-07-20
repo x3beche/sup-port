@@ -12,9 +12,10 @@ from ..models import (
     ModuleProgress,
     ModuleTarget,
     TargetUpdate,
+    WeekDay,
 )
 from ..modules import MODULES, MODULES_BY_KEY, module_list
-from ..targets import custom_targets, effective_target
+from ..targets import custom_targets, effective_target, favorite_step, usage_field
 
 router = APIRouter(prefix="/api", tags=["tracker"])
 
@@ -126,6 +127,8 @@ async def daily_summary(
                 default_target=module.target,
                 is_custom_target=module.key in overrides,
                 step=module.step,
+                steps=list(module.step_options()),
+                favorite_step=favorite_step(user, module),
                 description=module.description,
                 value=value,
                 ratio=ratio,
@@ -171,6 +174,7 @@ async def add_to_entry(
     module_key: str,
     payload: EntryDelta,
     date: date_type | None = None,
+    used_step: float | None = Query(default=None, description="Dokunulan kademe"),
     user: dict = Depends(current_user),
 ):
     module = _module_or_404(module_key)
@@ -184,6 +188,14 @@ async def add_to_entry(
         upsert=True,
         return_document=ReturnDocument.AFTER,
     )
+
+    # Only a tap on one of the offered steps counts; a debounced burst arrives as
+    # a multiple, and the client reports which step produced it.
+    if used_step is not None and used_step in module.step_options():
+        await _users().update_one(
+            {"_id": user["_id"]},
+            {"$inc": {usage_field(module.key, used_step): 1}},
+        )
 
     # $inc can drive the counter negative, which no habit metric should be.
     if doc["value"] < 0:
@@ -226,3 +238,50 @@ async def module_history(
         }
         for offset in range(days)
     ]
+
+
+@router.get("/summary/week", response_model=list[WeekDay])
+async def weekly_summary(
+    days: int = Query(default=7, ge=2, le=31),
+    date: date_type | None = None,
+    user: dict = Depends(current_user),
+):
+    """Haftalık grafik için kesintisiz günlük puan serisi."""
+    end = date_type.fromisoformat(_resolve_date(date))
+    start = end - timedelta(days=days - 1)
+
+    cursor = _entries().find(
+        {
+            "user_id": user["_id"],
+            "date": {"$gte": start.isoformat(), "$lte": end.isoformat()},
+        }
+    )
+    by_day: dict[str, dict[str, float]] = {}
+    async for doc in cursor:
+        by_day.setdefault(doc["date"], {})[doc["module"]] = doc["value"]
+
+    overrides = custom_targets(user)
+    today = end.isoformat()
+
+    result: list[WeekDay] = []
+    for offset in range(days):
+        day = (start + timedelta(days=offset)).isoformat()
+        values = by_day.get(day, {})
+        ratios = []
+        completed = 0
+        for module in MODULES:
+            target = overrides.get(module.key, module.target)
+            ratio = min(float(values.get(module.key, 0)) / target, 1.0) if target else 0.0
+            ratios.append(ratio)
+            if ratio >= 1.0:
+                completed += 1
+        result.append(
+            WeekDay(
+                date=date_type.fromisoformat(day),
+                score=round(sum(ratios) / len(ratios) * 100) if ratios else 0,
+                completed_count=completed,
+                module_count=len(MODULES),
+                is_today=day == today,
+            )
+        )
+    return result

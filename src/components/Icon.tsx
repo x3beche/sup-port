@@ -15,7 +15,9 @@ export type IconName =
   | 'book'
   | 'lotus'
   | 'flame'
-  | 'chart';
+  | 'chart'
+  | 'chevron-left'
+  | 'check';
 
 type Props = {
   name: IconName;
@@ -134,6 +136,12 @@ function renderPaths(name: IconName, stroke: object, color: string) {
           <Path d="M7 20v-5.6M12 20V7.6M17 20v-8.8" {...stroke} />
         </>
       );
+
+    case 'chevron-left':
+      return <Path d="M15 5 L8 12 L15 19" {...stroke} />;
+
+    case 'check':
+      return <Path d="M5 12.5 L10 17.5 L19 7" {...stroke} />;
 
     default:
       return <Circle cx="12" cy="12" r="8" stroke={color} strokeWidth={1.7} fill="none" />;

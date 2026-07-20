@@ -1,18 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { theme } from '../theme';
+import Svg, { Circle } from 'react-native-svg';
+import { tabularNums, theme } from '../theme';
 
 type Props = {
   score: number;
   size?: number;
   strokeWidth?: number;
-  caption?: string;
+  /** Modül ekranında halkanın da modülün rengini alması için. */
+  color?: string;
 };
 
 const EASE = Easing.bezier(...theme.motion.ease);
 
-export function ScoreRing({ score, size = 168, strokeWidth = 14, caption }: Props) {
+export function ScoreRing({
+  score,
+  size = 168,
+  strokeWidth = 14,
+  color = theme.color.accent,
+}: Props) {
   const target = Math.max(0, Math.min(100, score));
 
   // The arc and the number are driven off one value so they can never disagree.
@@ -44,12 +50,6 @@ export function ScoreRing({ score, size = 168, strokeWidth = 14, caption }: Prop
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size}>
-        <Defs>
-          <LinearGradient id="scoreGradient" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#00C2A8" />
-            <Stop offset="1" stopColor={theme.color.accent} />
-          </LinearGradient>
-        </Defs>
         <Circle
           cx={center}
           cy={center}
@@ -62,7 +62,7 @@ export function ScoreRing({ score, size = 168, strokeWidth = 14, caption }: Prop
           cx={center}
           cy={center}
           r={radius}
-          stroke="url(#scoreGradient)"
+          stroke={color}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           fill="none"
@@ -74,10 +74,9 @@ export function ScoreRing({ score, size = 168, strokeWidth = 14, caption }: Prop
       </Svg>
 
       <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">
-        <Text style={styles.score} accessibilityLabel={`Günlük puan ${target}`}>
+        <Text style={styles.score} accessibilityLabel={`Yüzde ${target}`}>
           {Math.round(shown)}
         </Text>
-        {caption ? <Text style={styles.caption}>{caption}</Text> : null}
       </View>
     </View>
   );
@@ -89,17 +88,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   score: {
-    fontSize: 46,
+    fontSize: theme.font.hero,
     fontWeight: '800',
     color: theme.color.text,
     letterSpacing: -1,
-  },
-  caption: {
-    marginTop: 2,
-    fontSize: theme.font.tiny,
-    fontWeight: '600',
-    color: theme.color.textMuted,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    ...tabularNums,
   },
 });

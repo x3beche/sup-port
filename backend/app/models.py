@@ -77,6 +77,9 @@ class ModuleProgress(BaseModel):
     default_target: float
     is_custom_target: bool
     step: float
+    steps: list[float]
+    # En çok dokunulan kademe; arayüzde en büyük alanı o alır.
+    favorite_step: float
     description: str
     value: float
     # Clamped at 1.0 so one overachieving module cannot mask the others.
@@ -90,3 +93,11 @@ class DailySummary(BaseModel):
     completed_count: int
     module_count: int
     modules: list[ModuleProgress]
+
+
+class WeekDay(BaseModel):
+    date: date
+    score: int
+    completed_count: int
+    module_count: int
+    is_today: bool

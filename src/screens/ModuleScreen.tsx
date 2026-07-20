@@ -1,19 +1,26 @@
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Icon, type IconName } from '../components/Icon';
 import { ScoreRing } from '../components/ScoreRing';
+import { StepPad } from '../components/StepPad';
 import { TargetEditor } from '../components/TargetEditor';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest, todayIso } from '../lib/api';
 import { useCachedQuery } from '../lib/useCachedQuery';
-import { theme } from '../theme';
+import { onColor, tabularNums, theme } from '../theme';
 import type { HistoryPoint, ModuleProgress } from '../types';
 
 const HISTORY_DAYS = 7;
+// Long enough to swallow a burst of taps, short enough that leaving the screen
+// right after tapping still feels immediate.
+const FLUSH_DELAY_MS = 300;
 const WEEKDAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
+const NUMBER_FORMAT = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 });
+
+// 8000 yerine 8.000: büyük hedeflerde basamak saymak gerekmesin.
 function formatValue(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return NUMBER_FORMAT.format(value);
 }
 
 export function ModuleScreen({
@@ -91,30 +98,110 @@ export function ModuleScreen({
     applyTarget(result.target, result.is_custom);
   }, [applyTarget, module.key, token]);
 
-  const change = useCallback(
-    async (delta: number) => {
-      if (busy) return;
-      setBusy(true);
-      setError(null);
+  /*
+   * Taps arrive faster than the round trip. Dropping the ones that land while a
+   * request is in flight silently loses data, so they accumulate here and flush
+   * as one request when the user stops tapping. `shown` is the source of truth
+   * for the optimistic value — reading it from state would lag behind a burst.
+   */
+  const shown = useRef(initial.value);
+  const pendingDelta = useRef(0);
+  const committed = useRef(initial.value);
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-      const previous = module.value;
-      // Optimistic: the counter must feel instant even on a slow connection.
-      applyValue(Math.max(0, previous + delta));
+  const flush = useCallback(async () => {
+    const delta = pendingDelta.current;
+    if (delta === 0) return;
+    pendingDelta.current = 0;
 
-      try {
-        const result = await apiRequest<{ value: number }>(
-          `/api/entries/${module.key}/add?date=${today}`,
-          { method: 'POST', body: { delta }, token },
-        );
+    const rollbackTo = committed.current;
+    setBusy(true);
+    try {
+      const step = usedStep.current;
+      const query = step === null ? '' : `&used_step=${step}`;
+      const result = await apiRequest<{ value: number }>(
+        `/api/entries/${module.key}/add?date=${today}${query}`,
+        // keepalive: a reload inside the debounce window used to drop the whole
+        // burst; the request now outlives the page.
+        { method: 'POST', body: { delta }, token, keepalive: true },
+      );
+      committed.current = result.value;
+      // More taps landed during the request, so the screen is already ahead of
+      // this response; let the next flush reconcile instead of snapping back.
+      if (pendingDelta.current === 0) {
+        shown.current = result.value;
         applyValue(result.value);
-      } catch (err) {
-        applyValue(previous);
-        setError((err as Error)?.message ?? 'Kaydedilemedi');
-      } finally {
-        setBusy(false);
+      }
+    } catch (err) {
+      pendingDelta.current = 0;
+      shown.current = rollbackTo;
+      applyValue(rollbackTo);
+      setError((err as Error)?.message ?? 'Kaydedilemedi');
+    } finally {
+      setBusy(false);
+    }
+  }, [applyValue, module.key, today, token]);
+
+  const usedStep = useRef<number | null>(null);
+
+  const change = useCallback(
+    (delta: number, step?: number) => {
+      setError(null);
+      if (step !== undefined) usedStep.current = step;
+
+      const next = Math.max(0, shown.current + delta);
+      // Clamping at zero means the queued delta must match what the user sees,
+      // otherwise the server would drift below the displayed value.
+      pendingDelta.current += next - shown.current;
+      shown.current = next;
+      applyValue(next);
+
+      if (flushTimer.current) clearTimeout(flushTimer.current);
+      flushTimer.current = setTimeout(() => {
+        flushTimer.current = null;
+        void flush();
+      }, FLUSH_DELAY_MS);
+    },
+    [applyValue, flush],
+  );
+
+  const flushNow = useCallback(async () => {
+    if (flushTimer.current) {
+      clearTimeout(flushTimer.current);
+      flushTimer.current = null;
+    }
+    await flush();
+  }, [flush]);
+
+  // Leaving the screen inside the debounce window used to drop the write, and
+  // the home screen then refetched the stale value. Send it before navigating.
+  const handleBack = useCallback(async () => {
+    await flushNow();
+    onBack();
+  }, [flushNow, onBack]);
+
+  // A reload or tab switch inside the window would lose it just the same.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') void flushNow();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', onHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', onHide);
+    };
+  }, [flushNow]);
+
+  useEffect(
+    () => () => {
+      if (flushTimer.current) {
+        clearTimeout(flushTimer.current);
+        void flush();
       }
     },
-    [applyValue, busy, module.key, module.value, today, token],
+    [flush],
   );
 
   const percent = Math.round(module.ratio * 100);
@@ -127,8 +214,14 @@ export function ModuleScreen({
       testID={`module-screen-${module.key}`}
     >
       <View style={styles.topBar}>
-        <Pressable onPress={onBack} testID="back" style={styles.back} accessibilityRole="button">
-          <Text style={styles.backGlyph}>‹</Text>
+        <Pressable
+          onPress={handleBack}
+          testID="back"
+          style={styles.back}
+          accessibilityRole="button"
+          accessibilityLabel="Geri"
+        >
+          <Icon name="chevron-left" size={22} strokeWidth={2} color={theme.color.text} />
         </Pressable>
         <Text style={styles.topTitle}>{module.title}</Text>
         <View style={styles.back} />
@@ -141,10 +234,13 @@ export function ModuleScreen({
         <Text style={styles.description}>{module.description}</Text>
 
         <View style={styles.ringWrap}>
-          <ScoreRing score={percent} size={150} strokeWidth={12} caption={`% ${percent}`} />
+          <ScoreRing score={percent} size={150} strokeWidth={12} color={module.color} />
         </View>
 
-        <Text style={styles.value} testID="module-value">
+        <Text
+          style={[styles.value, module.completed && { color: module.color }]}
+          testID="module-value"
+        >
           {formatValue(module.value)}
           <Text style={styles.valueTarget}>
             {' '}
@@ -152,30 +248,8 @@ export function ModuleScreen({
           </Text>
         </Text>
 
-        {module.completed ? (
-          <View style={styles.doneChip}>
-            <Text style={styles.doneText}>Bugünlük tamam ✓</Text>
-          </View>
-        ) : null}
+        <StepPad module={module} onChange={change} />
 
-        <View style={styles.buttons}>
-          <StepButton
-            label={`− ${formatValue(module.step)}`}
-            onPress={() => change(-module.step)}
-            disabled={busy || module.value <= 0}
-            testID="decrement"
-          />
-          <StepButton
-            label={`+ ${formatValue(module.step)}`}
-            onPress={() => change(module.step)}
-            disabled={busy}
-            primary
-            color={module.color}
-            testID="increment"
-          />
-        </View>
-
-        {busy ? <ActivityIndicator style={styles.busy} color={module.color} /> : null}
         {error ? (
           <Text style={styles.error} testID="module-error">
             {error}
@@ -200,7 +274,7 @@ export function ModuleScreen({
                       styles.bar,
                       {
                         height: `${height}%`,
-                        backgroundColor: reached ? module.color : `${module.color}55`,
+                        backgroundColor: reached ? module.color : `${module.color}A6`,
                       },
                     ]}
                   />
@@ -212,41 +286,6 @@ export function ModuleScreen({
         </View>
       </View>
     </ScrollView>
-  );
-}
-
-function StepButton({
-  label,
-  onPress,
-  disabled,
-  primary,
-  color,
-  testID,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  primary?: boolean;
-  color?: string;
-  testID?: string;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      testID={testID}
-      accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.stepButton,
-        primary ? { backgroundColor: color ?? theme.color.accent } : styles.stepGhost,
-        pressed && { opacity: 0.8 },
-        disabled && styles.stepDisabled,
-      ]}
-    >
-      <Text style={[styles.stepLabel, primary ? styles.stepLabelPrimary : styles.stepLabelGhost]}>
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -266,12 +305,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: theme.radius.pill,
   },
-  backGlyph: {
-    fontSize: 30,
-    lineHeight: 34,
-    color: theme.color.text,
-    fontWeight: '700',
-  },
   topTitle: {
     fontSize: theme.font.body + 1,
     fontWeight: '800',
@@ -282,8 +315,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     padding: theme.space(5),
     alignItems: 'center',
-    ...theme.shadow.card,
-  },
+      },
   icon: {
     width: 56,
     height: 56,
@@ -300,50 +332,16 @@ const styles = StyleSheet.create({
   ringWrap: { marginTop: theme.space(4) },
   value: {
     marginTop: theme.space(4),
-    fontSize: 24,
+    fontSize: theme.font.display,
     fontWeight: '800',
     color: theme.color.text,
+    ...tabularNums,
   },
   valueTarget: {
     fontSize: theme.font.body,
     fontWeight: '600',
     color: theme.color.textMuted,
   },
-  doneChip: {
-    marginTop: theme.space(3),
-    paddingHorizontal: theme.space(3),
-    paddingVertical: theme.space(1.5),
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.color.successBg,
-  },
-  doneText: {
-    fontSize: theme.font.tiny,
-    fontWeight: '700',
-    color: theme.color.success,
-  },
-  buttons: {
-    flexDirection: 'row',
-    gap: theme.space(3),
-    marginTop: theme.space(5),
-    alignSelf: 'stretch',
-  },
-  stepButton: {
-    flex: 1,
-    paddingVertical: theme.space(4),
-    borderRadius: theme.radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepGhost: {
-    backgroundColor: theme.color.bg,
-    borderWidth: 1,
-    borderColor: theme.color.border,
-  },
-  stepDisabled: { opacity: 0.45 },
-  stepLabel: { fontSize: theme.font.body, fontWeight: '800' },
-  stepLabelPrimary: { color: theme.color.onAccent },
-  stepLabelGhost: { color: theme.color.text },
-  busy: { marginTop: theme.space(3) },
   error: {
     marginTop: theme.space(3),
     fontSize: theme.font.label,
@@ -368,9 +366,9 @@ const styles = StyleSheet.create({
   barColumn: { alignItems: 'center', flex: 1 },
   barTrack: {
     height: 100,
-    width: 18,
+    width: 12,
     justifyContent: 'flex-end',
-    backgroundColor: theme.color.track,
+    // A filled track behind every bar drowned the single bar that carries data.
     borderRadius: theme.radius.pill,
     overflow: 'hidden',
   },
