@@ -31,6 +31,15 @@ grafiğe basılı tutmak görünümü puan/tamamlanan arasında değiştirir. Ku
 ve üstteki özet kartı tutamacından **büyük/kompakt** arasında boyutlandırılabilir
 (bu tercih cihazda kalır).
 
+### Uygulama mağazası
+
+Modüller birer mini-uygulama gibi **kurulabilir ve kaldırılabilir**. Ana ekrandaki
+"Mağaza"dan kategoriye göre listelenen uygulamalara girip Play Store tarzı bir
+detay ekranından kurup kaldırabilirsin. Kaldırılan bir uygulama ana ekrandan ve
+günlük puandan çıkar; geri kurulduğunda **verileri ve hedefi korunmuş** olarak
+döner (kayıtlar hiç silinmez, yalnızca gizlenir). Yeni bir modül eklemek yine
+`backend/app/modules.py` içine tek bir kayıt yazmaktır.
+
 Sürükleme için ek bir kütüphane kullanılmadı; PanResponder ile yazıldı, böylece
 web ve cihazda aynı çalışıyor ve native derleme zinciri değişmiyor. Dokunuş
 modülü açmaya, uzun basış hızlı kayda devam ediyor — hareket 8 px eşiğini
@@ -141,6 +150,9 @@ sunulduğu LAN adresi kullanılır. Elle vermek için `EXPO_PUBLIC_API_URL` tan�
 | `DELETE /api/targets/{modül}` | Varsayılan hedefe dön |
 | `GET /api/summary?date=` | Günlük puan ve modül ilerlemeleri |
 | `GET /api/summary/week?days=` | Haftalık puan serisi (grafik için) |
+| `GET /api/store` | Tüm uygulamalar + kurulu bayrağı |
+| `POST /api/store/{app}/install` | Uygulamayı kur |
+| `DELETE /api/store/{app}/install` | Uygulamayı kaldır |
 | `GET /api/order` | Kullanıcının modül sırası |
 | `PUT /api/order` | Izgara sırasını kaydet |
 | `POST /api/auth/logout` | Oturumu sunucu tarafında iptal eder |
@@ -150,6 +162,22 @@ sunulduğu LAN adresi kullanılır. Elle vermek için `EXPO_PUBLIC_API_URL` tan�
 
 `/health` dışındaki tüm uçlar oturum ister. Tarih parametresi istemcinin **yerel**
 takvim gününü taşır; gece 01:00'de girilen kayıt o güne yazılsın diye.
+
+## APK derleme
+
+Yerel Android araç zinciriyle (Android Studio SDK + JDK) release APK:
+
+```bash
+EXPO_PUBLIC_API_URL=http://<makine-lan-ip>:4000 bash scripts/build-apk.sh
+```
+
+Çıktı `dist/sup-port-<sürüm>.apk` olur. **Önemli:** bağımsız APK, backend'e
+derleme anında gömülen adresten bağlanır — telefon o adresle aynı ağda olmalı ve
+backend çalışıyor olmalıdır. Gerçek yayın için backend'in herkese açık bir
+sunucuya deploy edilmesi gerekir.
+
+Alternatif olarak bir `v*` tag'i push'lamak `.github/workflows/release.yml`
+üzerinden CI'da APK derleyip GitHub Release'e ekler.
 
 ## Sürekli entegrasyon
 
