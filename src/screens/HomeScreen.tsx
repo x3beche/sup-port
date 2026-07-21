@@ -75,9 +75,18 @@ export function HomeScreen({
     void writeJson(SUMMARY_COMPACT_KEY, compact);
   }, []);
 
-  const openQuickAdd = useCallback((module: ModuleProgress) => {
-    setQuickAdd((current) => (current?.key === module.key ? null : module));
-  }, []);
+  const openQuickAdd = useCallback(
+    (module: ModuleProgress) => {
+      // Diş fırçalama sayaçla değil sabah/akşam yuvalarıyla çalışır; hızlı "+1"
+      // brush_days ile çelişeceği için uzun basış onun ekranını açar.
+      if (module.key === 'brush') {
+        onOpenModule(module);
+        return;
+      }
+      setQuickAdd((current) => (current?.key === module.key ? null : module));
+    },
+    [onOpenModule],
+  );
 
   const quickChange = useCallback(
     async (delta: number, step: number) => {

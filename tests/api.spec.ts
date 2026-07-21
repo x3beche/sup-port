@@ -497,6 +497,160 @@ test.describe('Tracker', () => {
   });
 });
 
+test.describe('Diş fırçalama', () => {
+  // Three consecutive local days; each test uses a fresh user so streaks isolate.
+  const D3 = '2026-05-13';
+  const D2 = '2026-05-14';
+  const D1 = '2026-05-15';
+
+  async function setSlot(
+    request: APIRequestContext,
+    token: string,
+    date: string,
+    slot: 'morning' | 'evening',
+    done = true,
+  ) {
+    return request.put(`${API}/api/brush/slot?date=${date}`, {
+      headers: auth(token),
+      data: { slot, done },
+    });
+  }
+
+  async function completeDay(request: APIRequestContext, token: string, date: string) {
+    await setSlot(request, token, date, 'morning');
+    return setSlot(request, token, date, 'evening');
+  }
+
+  test('brush uçları oturum ister', async ({ request }) => {
+    expect((await request.get(`${API}/api/brush/status`)).status()).toBe(401);
+    expect(
+      (await request.put(`${API}/api/brush/slot`, { data: { slot: 'morning', done: true } })).status(),
+    ).toBe(401);
+  });
+
+  test('yeni kullanıcıda yuvalar boş, seri sıfır', async ({ request }) => {
+    const { token } = await registerUser(request, 'brush-fresh');
+    const res = await request.get(`${API}/api/brush/status?date=${D1}`, { headers: auth(token) });
+    expect(res.status()).toBe(200);
+
+    const s = await res.json();
+    expect(s).toMatchObject({
+      morning: false,
+      evening: false,
+      value: 0,
+      target: 2,
+      complete: false,
+      streak: 0,
+      best_streak: 0,
+      next_milestone: 3,
+    });
+  });
+
+  test('bir yuva günü tamamlamaz, iki yuva tamamlar ve seri başlar', async ({ request }) => {
+    const { token } = await registerUser(request, 'brush-slots');
+
+    const one = await (await setSlot(request, token, D1, 'morning')).json();
+    expect(one).toMatchObject({ morning: true, evening: false, value: 1, complete: false, streak: 0 });
+    expect(one.just_completed).toBe(false);
+
+    const two = await (await setSlot(request, token, D1, 'evening')).json();
+    expect(two).toMatchObject({ morning: true, evening: true, value: 2, complete: true, streak: 1 });
+    // The write that completes the day flags it so the client can celebrate.
+    expect(two.just_completed).toBe(true);
+  });
+
+  test('tamamlanan gün günlük özete ve puana yansır', async ({ request }) => {
+    const { token } = await registerUser(request, 'brush-summary');
+    const headers = auth(token);
+
+    await completeDay(request, token, D1);
+
+    const summary = await (
+      await request.get(`${API}/api/summary?date=${D1}`, { headers })
+    ).json();
+    const brush = summary.modules.find((m: { key: string }) => m.key === 'brush');
+    expect(brush.value).toBe(2);
+    expect(brush.completed).toBe(true);
+    expect(summary.completed_count).toBeGreaterThanOrEqual(1);
+  });
+
+  test('arka arkaya üç tam gün seriyi üçe çıkarır', async ({ request }) => {
+    const { token } = await registerUser(request, 'brush-streak');
+
+    await completeDay(request, token, D3);
+    await completeDay(request, token, D2);
+    await completeDay(request, token, D1);
+
+    const s = await (
+      await request.get(`${API}/api/brush/status?date=${D1}`, { headers: auth(token) })
+    ).json();
+    expect(s.streak).toBe(3);
+    expect(s.best_streak).toBe(3);
+    expect(s.next_milestone).toBe(7);
+  });
+
+  test('kilometre taşı yalnızca tamamlayan yazımda bir kez döner', async ({ request }) => {
+    const { token } = await registerUser(request, 'brush-milestone');
+
+    // Two older days done first, then complete the anchor day → streak hits 3.
+    await completeDay(request, token, D3);
+    await completeDay(request, token, D2);
+    await setSlot(request, token, D1, 'morning');
+
+    const completing = await (await setSlot(request, token, D1, 'evening')).json();
+    expect(completing.streak).toBe(3);
+    expect(completing.milestone).toBe(3);
+    expect(completing.just_completed).toBe(true);
+
+    // Re-touching an already-complete slot must not re-fire the celebration.
+    const again = await (await setSlot(request, token, D1, 'evening')).json();
+    expect(again.milestone).toBeNull();
+    expect(again.just_completed).toBe(false);
+  });
+
+  test('yuvayı geri almak tamamlanmayı ve değeri düşürür', async ({ request }) => {
+    const { token } = await registerUser(request, 'brush-undo');
+    const headers = auth(token);
+
+    await completeDay(request, token, D1);
+    const undone = await (await setSlot(request, token, D1, 'evening', false)).json();
+    expect(undone).toMatchObject({ morning: true, evening: false, value: 1, complete: false, streak: 0 });
+
+    // The daily entry follows the slot count back down.
+    const summary = await (
+      await request.get(`${API}/api/summary?date=${D1}`, { headers })
+    ).json();
+    const brush = summary.modules.find((m: { key: string }) => m.key === 'brush');
+    expect(brush.value).toBe(1);
+    expect(brush.completed).toBe(false);
+  });
+
+  test('en iyi seri boşluktan sonra korunur', async ({ request }) => {
+    const { token } = await registerUser(request, 'brush-best');
+
+    // A 3-day run, a gap, then a single day: current streak resets, best holds.
+    await completeDay(request, token, D3);
+    await completeDay(request, token, D2);
+    await completeDay(request, token, D1);
+    await completeDay(request, token, '2026-05-20');
+
+    const s = await (
+      await request.get(`${API}/api/brush/status?date=2026-05-20`, { headers: auth(token) })
+    ).json();
+    expect(s.streak).toBe(1);
+    expect(s.best_streak).toBe(3);
+  });
+
+  test('geçersiz yuva reddedilir', async ({ request }) => {
+    const { token } = await registerUser(request, 'brush-invalid');
+    const res = await request.put(`${API}/api/brush/slot?date=${D1}`, {
+      headers: auth(token),
+      data: { slot: 'noon', done: true },
+    });
+    expect(res.status()).toBe(422);
+  });
+});
+
 test.describe('Kişisel hedefler', () => {
   test('yeni kullanıcı varsayılan hedeflerle başlar', async ({ request }) => {
     const { token } = await registerUser(request, 'tgt-default');

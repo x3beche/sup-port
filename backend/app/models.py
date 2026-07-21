@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
 
@@ -62,6 +62,29 @@ class Entry(BaseModel):
     module: str
     date: date
     value: float
+
+
+class BrushSlotUpdate(BaseModel):
+    # A brush day has two named slots; the client toggles them individually so
+    # "did the morning, skipped the evening" is distinguishable from a bare count.
+    slot: Literal["morning", "evening"]
+    done: bool = True
+
+
+class BrushStatus(BaseModel):
+    date: date
+    morning: bool
+    evening: bool
+    target: int
+    value: int
+    complete: bool
+    streak: int
+    best_streak: int
+    next_milestone: int | None
+    # Set only on the write that just completed the day and landed on a
+    # milestone (7, 30, 100…); the client uses it to fire the confetti.
+    milestone: int | None = None
+    just_completed: bool = False
 
 
 class TargetUpdate(BaseModel):

@@ -41,6 +41,22 @@ async def _ensure_indexes(db: AsyncDatabase) -> None:
         [("user_id", ASCENDING), ("module", ASCENDING), ("date", ASCENDING)],
         unique=True,
     )
+    # /summary ve /summary/week bir kullanıcının bir tarih aralığındaki TÜM
+    # modüllerini modülden bağımsız çeker; module ortada olan tekil indeks bu
+    # aralığı tarayamıyordu. Bu destek indeksi o sıcak yolu aralık taramasına
+    # çevirir (anasayfa her açılışta ikisini de çağırır).
+    await db["entries"].create_index([("user_id", ASCENDING), ("date", ASCENDING)])
+    # Diş fırçalama yuvaları: bir kullanıcı/gün için tek belge, upsert idempotent.
+    await db["brush_days"].create_index(
+        [("user_id", ASCENDING), ("date", ASCENDING)],
+        unique=True,
+    )
+    # Seri hesabı yalnızca "tam" günlerin tarihlerini ister. complete belgeye
+    # denormalize edildiği için bu indeks sorguyu kapalı tarama (covered) yapar:
+    # belge okunmaz, tarih doğrudan indeksten gelir.
+    await db["brush_days"].create_index(
+        [("user_id", ASCENDING), ("complete", ASCENDING), ("date", ASCENDING)],
+    )
     # Revoked tokens are only useful until they expire on their own, so Mongo
     # drops each entry at its own expires_at instead of the list growing forever.
     await db["revoked_tokens"].create_index("expires_at", expireAfterSeconds=0)

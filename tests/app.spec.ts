@@ -105,14 +105,17 @@ test.describe('Panel ve modüller', () => {
   test('hedef tamamlanınca tamamlandı rozeti çıkar', async ({ page }) => {
     await registerThroughUi(page, 'complete');
 
-    await page.getByTestId('tile-brush').click();
-    await expect(page.getByTestId('module-screen-brush')).toBeVisible();
+    // Beslenme jenerik sayaçlı en küçük hedefli modül (3 öğün); diş fırçalama
+    // artık kendi ekranını kullandığı için ortak sayaç testi buna taşındı.
+    await page.getByTestId('tile-meal').click();
+    await expect(page.getByTestId('module-screen-meal')).toBeVisible();
 
-    // Brush target is 2 with step 1.
+    // Meal target is 3 with step 1.
     await page.getByTestId('increment-1').click();
     await page.getByTestId('increment-1').click();
+    await page.getByTestId('increment-1').click();
 
-    await expect(page.getByTestId('module-value')).toContainText('2 / 2 kez');
+    await expect(page.getByTestId('module-value')).toContainText('3 / 3 öğün');
   });
 
   test('geçmiş grafiği 7 gün çizer', async ({ page }) => {
@@ -127,6 +130,55 @@ test.describe('Panel ve modüller', () => {
     // Emoji would render as a text node; the tiles must contain real SVG art.
     await expect(page.getByTestId('tile-water').locator('svg')).toHaveCount(1);
     await expect(page.getByTestId('tile-sleep').locator('svg path').first()).toBeVisible();
+  });
+});
+
+test.describe('Diş fırçalama', () => {
+  test('brush kendi ekranını açar, yuvalar ve seri görünür', async ({ page }) => {
+    await registerThroughUi(page, 'brush-ui');
+
+    await page.getByTestId('tile-brush').click();
+    // Jenerik sayaç değil, özel ekran.
+    await expect(page.getByTestId('brush-screen')).toBeVisible();
+    await expect(page.getByTestId('module-screen-brush')).toHaveCount(0);
+    await expect(page.getByTestId('brush-slot-morning')).toBeVisible();
+    await expect(page.getByTestId('brush-slot-evening')).toBeVisible();
+    await expect(page.getByTestId('brush-streak')).toContainText('0');
+  });
+
+  test('iki yuva işaretlenince gün tamamlanır ve seri başlar', async ({ page }) => {
+    await registerThroughUi(page, 'brush-complete');
+
+    await page.getByTestId('tile-brush').click();
+    await expect(page.getByTestId('brush-screen')).toBeVisible();
+
+    await page.getByTestId('brush-slot-morning').click();
+    // Tek yuva günü tamamlamaz.
+    await expect(page.getByTestId('brush-complete-banner')).toHaveCount(0);
+
+    await page.getByTestId('brush-slot-evening').click();
+    await expect(page.getByTestId('brush-complete-banner')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('brush-streak')).toContainText('1');
+
+    // Panele dönünce tamamlanma yansır (kutucuk %0 değil).
+    await page.getByTestId('back').click();
+    await expect(page.getByTestId('home-screen')).toBeVisible();
+    await expect(page.getByTestId('tile-brush')).not.toContainText('%0', { timeout: 30_000 });
+  });
+
+  test('2 dakika sayacı açılıp kapanır', async ({ page }) => {
+    await registerThroughUi(page, 'brush-timer');
+
+    await page.getByTestId('tile-brush').click();
+    await page.getByTestId('brush-start').click();
+    await expect(page.getByTestId('brush-timer')).toBeVisible();
+    await expect(page.getByTestId('brush-timer-remaining')).toContainText('2:00');
+
+    // Duraklat/Devam çalışır, Vazgeç kapatır (yuva işaretlenmez).
+    await page.getByTestId('brush-timer-toggle').click();
+    await page.getByTestId('brush-timer-cancel').click();
+    await expect(page.getByTestId('brush-timer')).toHaveCount(0);
+    await expect(page.getByTestId('brush-complete-banner')).toHaveCount(0);
   });
 });
 
@@ -417,32 +469,33 @@ test.describe('Kişisel hedefler', () => {
   test('kullanıcı kendi hedefini belirleyebilir', async ({ page }) => {
     await registerThroughUi(page, 'ui-target');
 
-    await page.getByTestId('tile-brush').click();
-    await expect(page.getByTestId('target-value')).toContainText('2 kez');
+    await page.getByTestId('tile-meal').click();
+    await expect(page.getByTestId('target-value')).toContainText('3 öğün');
 
     await page.getByTestId('edit-target').click();
     await page.getByTestId('target-input').fill('5');
     await page.getByTestId('target-save').click();
 
-    await expect(page.getByTestId('target-value')).toContainText('5 kez');
+    await expect(page.getByTestId('target-value')).toContainText('5 öğün');
     await expect(page.getByTestId('target-value')).toContainText('kendi hedefin');
-    await expect(page.getByTestId('module-value')).toContainText('/ 5 kez');
+    await expect(page.getByTestId('module-value')).toContainText('/ 5 öğün');
   });
 
   test('yeni hedef tamamlanma durumunu yeniden hesaplar', async ({ page }) => {
     await registerThroughUi(page, 'ui-target-recalc');
 
-    await page.getByTestId('tile-brush').click();
+    await page.getByTestId('tile-meal').click();
     await page.getByTestId('increment-1').click();
     await page.getByTestId('increment-1').click();
-    await expect(page.getByTestId('module-value')).toContainText('2 / 2 kez');
+    await page.getByTestId('increment-1').click();
+    await expect(page.getByTestId('module-value')).toContainText('3 / 3 öğün');
 
     await page.getByTestId('edit-target').click();
-    await page.getByTestId('target-input').fill('4');
+    await page.getByTestId('target-input').fill('5');
     await page.getByTestId('target-save').click();
 
     // The target moved, so the same value is no longer complete.
-    await expect(page.getByTestId('module-value')).toContainText('2 / 4 kez');
+    await expect(page.getByTestId('module-value')).toContainText('3 / 5 öğün');
   });
 
   test('hedef varsayılana döndürülebilir', async ({ page }) => {

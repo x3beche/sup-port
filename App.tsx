@@ -5,6 +5,7 @@ import { ScreenTransition } from './src/components/ScreenTransition';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { hideScrollbars } from './src/lib/webChrome';
 import { AuthScreen } from './src/screens/AuthScreen';
+import { BrushScreen } from './src/screens/BrushScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ModuleScreen } from './src/screens/ModuleScreen';
 import { StoreDetailScreen } from './src/screens/StoreDetailScreen';
@@ -64,9 +65,12 @@ function Shell() {
   }
 
   if (route.name === 'module') {
+    // Diş fırçalama jenerik sayaç yerine kendi ekranını kullanır (yuvalar, seri,
+    // 2 dk sayaç). Diğer modüller ortak ModuleScreen'de.
+    const Screen = route.module.key === 'brush' ? BrushScreen : ModuleScreen;
     return (
       <ScreenTransition key={`module-${route.module.key}`} direction="forward">
-        <ModuleScreen module={route.module} onBack={() => goHome()} />
+        <Screen module={route.module} onBack={() => goHome()} />
       </ScreenTransition>
     );
   }

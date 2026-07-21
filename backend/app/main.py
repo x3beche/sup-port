@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 
 from .config import settings
 from .db import close, connect, ping
-from .routers import auth, tracker
+from .routers import auth, brush, tracker
 
 logger = logging.getLogger("sup-port")
 
@@ -63,6 +63,7 @@ async def security_headers(request: Request, call_next):
 
 app.include_router(auth.router)
 app.include_router(tracker.router)
+app.include_router(brush.router)
 
 
 @app.get("/health")

@@ -13,6 +13,7 @@
     "android": {
       "package": "app.support.tracker",
       "versionCode": 1,
+      "permissions": ["android.permission.VIBRATE"],
       "adaptiveIcon": {
         "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png",

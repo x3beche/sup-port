@@ -62,6 +62,23 @@ export type WeekDay = {
   is_today: boolean;
 };
 
+export type BrushSlot = 'morning' | 'evening';
+
+export type BrushStatus = {
+  date: string;
+  morning: boolean;
+  evening: boolean;
+  target: number;
+  value: number;
+  complete: boolean;
+  streak: number;
+  best_streak: number;
+  next_milestone: number | null;
+  /** Yalnızca günü tamamlayan yazımda ve kilometre taşına denk gelince dolu. */
+  milestone: number | null;
+  just_completed: boolean;
+};
+
 export type StoreApp = {
   key: string;
   title: string;
