@@ -83,6 +83,17 @@ module.exports = () => {
       // Oturum token'ları AsyncStorage yerine cihaz keystore/keychain'inde
       // (şifreli) saklansın diye — bkz. src/lib/secureStore.ts.
       'expo-secure-store',
+      // Okuma modülü: kitap barkodu (EAN-13) tarama için kamera. barcodeScanner
+      // native tarafta ETKİN olmalı; Expo Go'da güvenilir değil, EAS build şart.
+      // Ses gerekmediğinden RECORD_AUDIO istenmez.
+      [
+        'expo-camera',
+        {
+          cameraPermission: 'sup-port, kitap barkodlarını taramak için kameranı kullanır.',
+          recordAudioAndroid: false,
+          barcodeScannerEnabled: true,
+        },
+      ],
       // Debug key yerine gerçek release keystore ile imzalama.
       './plugins/withReleaseSigning',
     ],

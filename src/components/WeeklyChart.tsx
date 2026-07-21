@@ -13,10 +13,12 @@ function weekdayLabel(iso: string): string {
   return WEEKDAYS[day] ?? '';
 }
 
-export function WeeklyChart({ days }: { days: WeekDay[] }) {
+export function WeeklyChart({ days, tall = false }: { days: WeekDay[]; tall?: boolean }) {
   // Long-press flips the same series between percent and modules-completed
   // instead of adding a second card for it.
   const [mode, setMode] = useState<Mode>('score');
+  // "Uzun" düzen boyutu çubuk alanını yükseltir (bkz. HomeScreen düzen modu).
+  const chartHeight = tall ? 148 : CHART_HEIGHT;
 
   const { average, best } = useMemo(() => {
     if (!days.length) return { average: 0, best: 0 };
@@ -52,10 +54,10 @@ export function WeeklyChart({ days }: { days: WeekDay[] }) {
         {days.map((day) => {
           const ratio =
             mode === 'score' ? day.score / 100 : day.completed_count / maxCount;
-          const height = Math.max(3, ratio * CHART_HEIGHT);
+          const height = Math.max(3, ratio * chartHeight);
           return (
             <View key={day.date} style={styles.column}>
-              <View style={styles.barSlot}>
+              <View style={[styles.barSlot, { height: chartHeight }]}>
                 <View
                   style={[
                     styles.bar,

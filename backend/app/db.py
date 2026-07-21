@@ -67,6 +67,33 @@ async def _ensure_indexes(db: AsyncDatabase) -> None:
     # Antrenmanlar: günde birden çok olabilir; kullanıcı+tarih aralık sorgusu
     # (günlük liste, haftalık hedef) bu indeksi kullanır.
     await db["workouts"].create_index([("user_id", ASCENDING), ("date", ASCENDING)])
+    # Yemek: her öğe ayrı belge (öğün türüne göre gruplanır). Günlük liste ve
+    # öğün-sayısı rollup'ı kullanıcı+tarih aralık sorgusuyla okur.
+    await db["meals"].create_index([("user_id", ASCENDING), ("date", ASCENDING)])
+    # Beslenme profili (yalnızca yaş; gerisi spor_profiles ile paylaşılır):
+    # kullanıcı başına tek belge.
+    await db["nutrition_profiles"].create_index([("user_id", ASCENDING)], unique=True)
+    # Okuma kütüphanesi: kullanıcı başına kitap tekil (book_key), upsert idempotent.
+    await db["reading_books"].create_index(
+        [("user_id", ASCENDING), ("book_key", ASCENDING)],
+        unique=True,
+    )
+    # Raf listesi ve yıllık hedef türetimi (finished + finished_at.year) bu sıralı
+    # indeksi kullanır; shelf denormalize olduğu için raf filtresi indeksten gelir.
+    await db["reading_books"].create_index(
+        [("user_id", ASCENDING), ("shelf", ASCENDING), ("finished_at", ASCENDING)],
+    )
+    # Okuma oturumları: günde birden çok olabilir; günlük toplam (puan senkronu) ve
+    # istatistik/ritim sorguları kullanıcı+tarih aralığını tarar.
+    await db["reading_sessions"].create_index([("user_id", ASCENDING), ("date", ASCENDING)])
+    # Yıllık okuma hedefi: kullanıcı+yıl tek belge, upsert idempotent.
+    await db["reading_goals"].create_index(
+        [("user_id", ASCENDING), ("year", ASCENDING)],
+        unique=True,
+    )
+    # Kitap metadata önbelleği (kullanıcılar arası ortak, olgusal/CC0 veri): ISBN
+    # tekil. Katalog nadiren değiştiği için TTL yok — hem hız hem rate-limit koruması.
+    await db["book_cache"].create_index([("isbn13", ASCENDING)], unique=True)
     # Revoked tokens are only useful until they expire on their own, so Mongo
     # drops each entry at its own expires_at instead of the list growing forever.
     await db["revoked_tokens"].create_index("expires_at", expireAfterSeconds=0)

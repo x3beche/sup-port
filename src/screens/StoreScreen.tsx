@@ -9,7 +9,7 @@ import { theme } from '../theme';
 import type { StoreApp } from '../types';
 
 /** Mağazada kategori sırası; kayıtta olmayan kategori sona düşer. */
-const CATEGORY_ORDER = ['Sağlık', 'Hareket', 'Zihin', 'Öğrenme'];
+const CATEGORY_ORDER = ['Sağlık', 'Hareket', 'Zihin', 'Öğrenme', 'Finans'];
 
 function groupByCategory(apps: StoreApp[]): Array<[string, StoreApp[]]> {
   const groups = new Map<string, StoreApp[]>();
@@ -86,10 +86,18 @@ export function StoreScreen({
                 onPress={() => onOpenApp(app)}
                 testID={`store-app-${app.key}`}
                 accessibilityRole="button"
-                accessibilityLabel={`${app.title}, ${app.installed ? 'kurulu' : 'kurulu değil'}`}
+                accessibilityLabel={`${app.title}, ${
+                  app.coming_soon ? 'yakında' : app.installed ? 'kurulu' : 'kurulu değil'
+                }`}
                 style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
               >
-                <View style={[styles.icon, { backgroundColor: `${app.color}26` }]}>
+                <View
+                  style={[
+                    styles.icon,
+                    { backgroundColor: `${app.color}26` },
+                    app.coming_soon && styles.iconSoon,
+                  ]}
+                >
                   <Icon name={app.icon as IconName} size={24} color={app.color} />
                 </View>
                 <View style={styles.rowText}>
@@ -98,7 +106,11 @@ export function StoreScreen({
                     {app.description}
                   </Text>
                 </View>
-                {app.installed ? (
+                {app.coming_soon ? (
+                  <View style={styles.soonTag}>
+                    <Text style={styles.soonText}>YAKINDA</Text>
+                  </View>
+                ) : app.installed ? (
                   <View style={styles.installedTag}>
                     <Icon name="check" size={12} strokeWidth={2.4} color={theme.color.success} />
                   </View>
@@ -182,6 +194,22 @@ const styles = StyleSheet.create({
     marginLeft: theme.space(2),
   },
   getText: { fontSize: theme.font.caption, fontWeight: '800', letterSpacing: 0.4 },
+  iconSoon: { opacity: 0.55 },
+  soonTag: {
+    paddingHorizontal: theme.space(3),
+    height: 32,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.color.warnBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: theme.space(2),
+  },
+  soonText: {
+    fontSize: theme.font.tiny,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    color: theme.color.warnText,
+  },
   footer: {
     textAlign: 'center',
     fontSize: theme.font.caption,

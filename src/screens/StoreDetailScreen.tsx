@@ -68,37 +68,55 @@ export function StoreDetailScreen({ app: initial, onBack, onChanged }: Props) {
           <Icon name={app.icon as IconName} size={40} color={app.color} />
         </View>
         <View style={styles.headerText}>
-          <Text style={styles.title}>{app.title}</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{app.title}</Text>
+            {app.coming_soon ? (
+              <View style={styles.soonBadge}>
+                <Text style={styles.soonBadgeText}>YAKINDA</Text>
+              </View>
+            ) : null}
+          </View>
           <Text style={styles.category}>{app.category}</Text>
         </View>
       </View>
 
-      <Pressable
-        onPress={toggle}
-        disabled={busy}
-        testID="detail-toggle"
-        accessibilityRole="button"
-        accessibilityLabel={app.installed ? `${app.title} uygulamasını kaldır` : `${app.title} uygulamasını kur`}
-        style={({ pressed }) => [
-          styles.button,
-          app.installed ? styles.buttonInstalled : { backgroundColor: app.color },
-          pressed && styles.pressed,
-          busy && styles.busy,
-        ]}
-      >
-        {busy ? (
-          <ActivityIndicator color={app.installed ? theme.color.text : onColor(app.color)} />
-        ) : (
-          <Text
-            style={[
-              styles.buttonText,
-              { color: app.installed ? theme.color.text : onColor(app.color) },
-            ]}
-          >
-            {app.installed ? 'Kaldır' : 'Kur'}
-          </Text>
-        )}
-      </Pressable>
+      {app.coming_soon ? (
+        <View
+          testID="detail-soon"
+          accessibilityRole="text"
+          accessibilityLabel={`${app.title} yakında geliyor`}
+          style={[styles.button, styles.buttonSoon]}
+        >
+          <Text style={[styles.buttonText, styles.buttonSoonText]}>Yakında</Text>
+        </View>
+      ) : (
+        <Pressable
+          onPress={toggle}
+          disabled={busy}
+          testID="detail-toggle"
+          accessibilityRole="button"
+          accessibilityLabel={app.installed ? `${app.title} uygulamasını kaldır` : `${app.title} uygulamasını kur`}
+          style={({ pressed }) => [
+            styles.button,
+            app.installed ? styles.buttonInstalled : { backgroundColor: app.color },
+            pressed && styles.pressed,
+            busy && styles.busy,
+          ]}
+        >
+          {busy ? (
+            <ActivityIndicator color={app.installed ? theme.color.text : onColor(app.color)} />
+          ) : (
+            <Text
+              style={[
+                styles.buttonText,
+                { color: app.installed ? theme.color.text : onColor(app.color) },
+              ]}
+            >
+              {app.installed ? 'Kaldır' : 'Kur'}
+            </Text>
+          )}
+        </Pressable>
+      )}
 
       {error ? (
         <Text style={styles.error} testID="detail-error" accessibilityRole="alert">
@@ -119,7 +137,9 @@ export function StoreDetailScreen({ app: initial, onBack, onChanged }: Props) {
         <View style={styles.metaDivider} />
         <View style={styles.metaItem}>
           <Text style={styles.metaLabel}>Durum</Text>
-          <Text style={styles.metaValue}>{app.installed ? 'Kurulu' : 'Kurulu değil'}</Text>
+          <Text style={styles.metaValue}>
+            {app.coming_soon ? 'Yakında' : app.installed ? 'Kurulu' : 'Kurulu değil'}
+          </Text>
         </View>
       </View>
     </ScrollView>
@@ -140,8 +160,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerText: { marginLeft: theme.space(4), flexShrink: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   title: { fontSize: theme.font.title, fontWeight: '800', color: theme.color.text },
   category: { marginTop: 2, fontSize: theme.font.label, color: theme.color.textMuted },
+  soonBadge: {
+    marginLeft: theme.space(2),
+    paddingHorizontal: theme.space(2),
+    height: 22,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.color.warnBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soonBadgeText: {
+    fontSize: theme.font.tiny,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    color: theme.color.warnText,
+  },
   button: {
     height: 50,
     borderRadius: theme.radius.md,
@@ -153,6 +189,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: theme.color.border,
+  },
+  buttonSoon: {
+    backgroundColor: theme.color.warnBg,
+  },
+  buttonSoonText: {
+    color: theme.color.warnText,
   },
   pressed: { opacity: 0.85 },
   busy: { opacity: 0.75 },

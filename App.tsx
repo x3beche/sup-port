@@ -10,9 +10,12 @@ import { AuthScreen } from './src/screens/AuthScreen';
 import { BrushScreen } from './src/screens/BrushScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ModuleScreen } from './src/screens/ModuleScreen';
+import { OkumaScreen } from './src/screens/OkumaScreen';
+import { ProfileScreen } from './src/screens/ProfileScreen';
 import { SporScreen } from './src/screens/SporScreen';
 import { StoreDetailScreen } from './src/screens/StoreDetailScreen';
 import { StoreScreen } from './src/screens/StoreScreen';
+import { YemekScreen } from './src/screens/YemekScreen';
 import { theme } from './src/theme';
 import type { ModuleProgress, StoreApp } from './src/types';
 
@@ -20,7 +23,8 @@ type Route =
   | { name: 'home' }
   | { name: 'module'; module: ModuleProgress }
   | { name: 'store' }
-  | { name: 'storeDetail'; app: StoreApp };
+  | { name: 'storeDetail'; app: StoreApp }
+  | { name: 'profile' };
 
 /**
  * A small route stack instead of a navigator: the app is only ever a couple of
@@ -51,6 +55,11 @@ function Shell() {
     setRoute({ name: 'store' });
   }, []);
 
+  const goProfile = useCallback(() => {
+    setGoingBack(false);
+    setRoute({ name: 'profile' });
+  }, []);
+
   if (initialising) {
     return (
       <View style={styles.loader} testID="app-loading">
@@ -69,14 +78,18 @@ function Shell() {
 
   if (route.name === 'module') {
     // Bazı modüller jenerik sayaç yerine kendi zengin ekranını kullanır (diş
-    // fırçalama: yuvalar/seri/2 dk sayaç; spor: kütüphane/BMI/hedef). Diğerleri
-    // ortak ModuleScreen'de.
+    // fırçalama: yuvalar/seri/2 dk sayaç; spor: kütüphane/BMI/hedef; okuma:
+    // kütüphane/raflar/oturum/yıllık hedef). Diğerleri ortak ModuleScreen'de.
     const Screen =
       route.module.key === 'brush'
         ? BrushScreen
         : route.module.key === 'workout'
           ? SporScreen
-          : ModuleScreen;
+          : route.module.key === 'reading'
+            ? OkumaScreen
+            : route.module.key === 'meal'
+              ? YemekScreen
+              : ModuleScreen;
     return (
       <ScreenTransition key={`module-${route.module.key}`} direction="forward">
         <Screen module={route.module} onBack={() => goHome()} />
@@ -108,11 +121,20 @@ function Shell() {
     );
   }
 
+  if (route.name === 'profile') {
+    return (
+      <ScreenTransition key="profile" direction="forward">
+        <ProfileScreen onBack={() => goHome()} />
+      </ScreenTransition>
+    );
+  }
+
   return (
     <ScreenTransition key={`home-${homeVersion}`} direction={goingBack ? 'backward' : 'fade'}>
       <HomeScreen
         onOpenModule={(module) => push({ name: 'module', module })}
         onOpenStore={goStore}
+        onOpenProfile={goProfile}
       />
     </ScreenTransition>
   );

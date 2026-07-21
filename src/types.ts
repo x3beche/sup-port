@@ -197,6 +197,145 @@ export type SporMeta = {
   safe_weekly_loss_kg: [number, number];
 };
 
+// --- Okuma / Kütüphane modülü ---
+export type Shelf = 'reading' | 'to_read' | 'finished';
+
+/** Aramadan/lookup'tan gelen aday kitap (henüz kütüphanede değil). */
+export type BookCandidate = {
+  key: string | null;
+  isbn13: string | null;
+  isbn10: string | null;
+  title: string;
+  subtitle: string | null;
+  authors: string[];
+  cover_url: string | null;
+  cover_source: string | null;
+  page_count: number | null;
+  published_year: number | null;
+  publisher: string | null;
+  subjects: string[];
+  language: string | null;
+  description: string | null;
+  source: string;
+};
+
+/** Kullanıcının kütüphanesindeki kitap. */
+export type LibraryBook = {
+  book_key: string;
+  isbn13: string | null;
+  isbn10: string | null;
+  title: string;
+  subtitle: string | null;
+  authors: string[];
+  cover_url: string | null;
+  cover_source: string | null;
+  page_count: number | null;
+  published_year: number | null;
+  publisher: string | null;
+  subjects: string[];
+  language: string | null;
+  description: string | null;
+  source: string | null;
+  shelf: Shelf;
+  rating: number | null;
+  notes: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  added_at: string | null;
+};
+
+export type ShelfCounts = { reading: number; to_read: number; finished: number };
+
+export type BooksResponse = { counts: ShelfCounts; books: LibraryBook[] };
+
+export type SearchResponse = { query: string; count: number; results: BookCandidate[] };
+
+export type ReadingSession = {
+  id: string;
+  book_key: string | null;
+  duration_min: number | null;
+  pages: number | null;
+};
+
+export type SessionsResponse = {
+  date: string;
+  sessions: ReadingSession[];
+  total_min: number;
+  total_pages: number;
+};
+
+export type ReadingGoal = {
+  year: number;
+  target_books: number;
+  completed_books: number;
+  target_pages: number | null;
+  ratio: number;
+  is_custom: boolean;
+};
+
+export type ReadingStats = {
+  finished_count: number;
+  finished_this_year: number;
+  total_pages: number;
+  total_minutes: number;
+  top_authors: { name: string; count: number }[];
+  top_subjects: { name: string; count: number }[];
+  avg_rating: number | null;
+  monthly: { month: string; minutes: number }[];
+  streak: number;
+  best_streak: number;
+  next_milestone: number | null;
+};
+
+export type ReadingInsight = {
+  source: string;
+  headline: string;
+  on_track: boolean;
+  completed_books: number;
+  target_books: number;
+  notes: string[];
+  summary?: string;
+};
+
+export type OkumaMeta = {
+  shelves: { key: Shelf; label: string }[];
+  default_target_books: number;
+  cover_attribution: string;
+  cover_attribution_url: string;
+};
+
+// --- Genel kullanıcı profili (modüller arası paylaşılan vücut bilgileri) ---
+export type UserProfile = {
+  age: number | null;
+  sex: 'erkek' | 'kadin' | null;
+  height_cm: number | null;
+  activity_level: string | null;
+  goal: 'ver' | 'koru' | 'al' | null;
+  target_weight_kg: number | null;
+  asian_thresholds: boolean;
+  weight_kg: number | null;
+  waist_cm: number | null;
+  bmi: number | null;
+  bmi_category: string | null;
+  bmi_label: string | null;
+  measured_at: string | null;
+  has_body_info: boolean;
+};
+
+export type ProfileTimelinePoint = {
+  date: string;
+  weight_kg: number | null;
+  waist_cm: number | null;
+  bmi: number | null;
+  bmi_category: string | null;
+};
+
+export type ProfileTimeline = {
+  count: number;
+  trend_kg: number | null;
+  points: ProfileTimelinePoint[];
+};
+
 export type StoreApp = {
   key: string;
   title: string;
@@ -208,4 +347,136 @@ export type StoreApp = {
   unit: string;
   target: number;
   installed: boolean;
+  /** Mağazada "Yakında" olarak görünür; henüz kurulamaz. */
+  coming_soon: boolean;
+};
+
+// --- Yemek / Beslenme modülü ---
+export type MealType = 'kahvalti' | 'ogle' | 'aksam' | 'atistirma';
+export type FoodSource = 'local' | 'openfoodfacts' | 'usda_fdc' | 'vision_llm' | 'manual';
+
+export type Macros = {
+  kcal: number;
+  protein_g: number;
+  carb_g: number;
+  fat_g: number;
+};
+
+/** Arama/barkod sonucu — değerler 100 g başınadır. */
+export type Food = {
+  key: string;
+  name: string;
+  brand?: string | null;
+  barcode?: string | null;
+  per: string;
+  kcal: number;
+  protein_g: number;
+  carb_g: number;
+  fat_g: number;
+  default_serving_g?: number | null;
+  source: FoodSource;
+  source_ref?: string | null;
+  attribution?: string;
+};
+
+export type MealItem = {
+  id: string;
+  meal_type: MealType;
+  name: string;
+  brand?: string | null;
+  barcode?: string | null;
+  qty_g: number;
+  kcal: number;
+  protein_g: number;
+  carb_g: number;
+  fat_g: number;
+  source: FoodSource;
+  source_ref?: string | null;
+  /** Fotoğraf tahmini öğesi: arayüzde "tahmini" rozetiyle gösterilir. */
+  estimated: boolean;
+  confidence?: number | null;
+};
+
+export type MealGroup = {
+  meal_type: MealType;
+  label: string;
+  items: MealItem[];
+  subtotal: Macros;
+};
+
+export type MealDay = {
+  date: string;
+  meals: MealGroup[];
+  totals: Macros;
+  meal_count: number;
+  meal_target: number;
+};
+
+export type NutritionTarget = {
+  has_data: boolean;
+  missing?: string[];
+  goal?: 'ver' | 'koru' | 'al';
+  bmr?: number;
+  maintenance_kcal?: number;
+  target_kcal?: number;
+  floor_kcal?: number;
+  floor_applied?: boolean;
+  weekly_change_kg?: number;
+  warning?: string | null;
+  protein_g?: number;
+  carb_g?: number;
+  fat_g?: number;
+  amdr?: Record<string, [number, number]>;
+};
+
+export type NutritionSummary = MealDay & {
+  target: NutritionTarget;
+  notes: { disclaimer: string; eating_disorder: string; photo: string };
+  remaining_kcal?: number;
+  kcal_ratio?: number;
+};
+
+export type NutritionProfile = {
+  age: number | null;
+  sex: 'erkek' | 'kadin' | null;
+  height_cm: number | null;
+  activity_level: string | null;
+  goal: 'ver' | 'koru' | 'al' | null;
+  target_weight_kg: number | null;
+  weight_kg: number | null;
+  has_body_metrics: boolean;
+};
+
+export type YemekMeta = {
+  meal_types: { key: MealType; label: string }[];
+  activity_levels: { key: string; label: string; factor: number }[];
+  amdr: Record<string, [number, number]>;
+  floor_kcal: { kadin: number; erkek: number };
+  meal_target: number;
+  disclaimer: string;
+  eating_disorder_note: string;
+  photo_note: string;
+  sources: Record<string, string>;
+  llm_available: boolean;
+};
+
+export type EstimateItem = {
+  name: string;
+  qty_g: number;
+  kcal: number;
+  protein_g: number;
+  carb_g: number;
+  fat_g: number;
+  confidence: number;
+};
+
+export type PhotoEstimate = {
+  photo_hash: string;
+  estimated: true;
+  source: 'vision_llm';
+  items: EstimateItem[];
+  total_kcal: number;
+  confidence: number;
+  range_kcal: [number, number];
+  note: string;
 };

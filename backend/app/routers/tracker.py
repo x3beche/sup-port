@@ -69,6 +69,7 @@ async def list_targets(user: dict = Depends(current_user)):
             is_custom=module.key in overrides,
         )
         for module in MODULES
+        if not module.coming_soon
     ]
 
 
@@ -335,6 +336,7 @@ def _store_app(module, installed: set[str]) -> StoreApp:
         unit=module.unit,
         target=module.target,
         installed=module.key in installed,
+        coming_soon=module.coming_soon,
     )
 
 
@@ -347,6 +349,10 @@ async def store(user: dict = Depends(current_user)):
 @router.post("/store/{module_key}/install", response_model=StoreApp)
 async def install_app(module_key: str, user: dict = Depends(current_user)):
     module = _module_or_404(module_key)
+    if module.coming_soon:
+        # "Yakında" modülleri henüz işlevsel değil; kurulmalarına izin verme ki
+        # boş bir modül puana ve ana ızgaraya sızmasın.
+        raise HTTPException(status_code=409, detail="Bu uygulama yakında geliyor")
     # Write the full explicit list. A naive $addToSet on an absent field would
     # collapse the implicit "all installed" default down to just this one app.
     current = installed_keys(user)

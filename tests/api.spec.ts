@@ -950,3 +950,136 @@ test.describe('Kişisel hedefler', () => {
     expect((await request.delete(`${API}/api/targets/water`)).status()).toBe(401);
   });
 });
+
+// Metadata lookup/search canlı Google Books / Open Library'ye gider; bu blok
+// bilerek AĞA ÇIKMAYAN uçları test eder (checksum, raf, oturum→puan, hedef,
+// istatistik). Canlı proxy manuel/gerçek cihazda doğrulanır.
+test.describe('Okuma — kütüphane ve oturum', () => {
+  test('meta rafları ve kapak atıfını döner', async ({ request }) => {
+    const { token } = await registerUser(request, 'okuma-meta');
+    const meta = await (await request.get(`${API}/api/okuma/meta`, { headers: auth(token) })).json();
+    expect(meta.shelves.map((s: { key: string }) => s.key)).toEqual(['reading', 'to_read', 'finished']);
+    expect(meta.default_target_books).toBe(12);
+    expect(meta.cover_attribution).toBeTruthy();
+  });
+
+  test('geçersiz ISBN lookup 422', async ({ request }) => {
+    const { token } = await registerUser(request, 'okuma-isbn');
+    // Kitap dışı önek / bozuk checksum → 422 (ağa çıkmadan reddedilir).
+    const bad = await request.get(`${API}/api/okuma/lookup?isbn=1234567890123`, { headers: auth(token) });
+    expect(bad.status()).toBe(422);
+  });
+
+  test('elle kitap eklenir, ISBN ile kapak URL türetilir', async ({ request }) => {
+    const { token } = await registerUser(request, 'okuma-add');
+    const headers = auth(token);
+    const book = await (
+      await request.post(`${API}/api/okuma/books`, {
+        headers,
+        data: { title: 'Kürk Mantolu Madonna', authors: ['Sabahattin Ali'], isbn13: '9789750718533', page_count: 160, shelf: 'reading', source: 'manual' },
+      })
+    ).json();
+    expect(book.book_key).toBe('book_9789750718533');
+    expect(book.shelf).toBe('reading');
+    expect(book.started_at).toBeTruthy();
+    // Kapak yalnızca URL (görsel kopyalanmaz) — Open Library'den türetilir.
+    expect(book.cover_url).toContain('covers.openlibrary.org');
+
+    const list = await (await request.get(`${API}/api/okuma/books`, { headers })).json();
+    expect(list.counts.reading).toBe(1);
+    expect(list.books.length).toBe(1);
+  });
+
+  test('oturum günlük puana (dk) yansır', async ({ request }) => {
+    const { token } = await registerUser(request, 'okuma-session');
+    const headers = auth(token);
+    await request.post(`${API}/api/okuma/sessions?date=${TODAY}`, {
+      headers,
+      data: { duration_min: 25, pages_from: 20, pages_to: 45 },
+    });
+    const s = await (
+      await request.post(`${API}/api/okuma/sessions?date=${TODAY}`, { headers, data: { duration_min: 10 } })
+    ).json();
+    expect(s.day_total_min).toBe(35);
+
+    const summary = await (await request.get(`${API}/api/summary?date=${TODAY}`, { headers })).json();
+    const reading = summary.modules.find((m: { key: string }) => m.key === 'reading');
+    expect(reading.value).toBe(35);
+    expect(reading.completed).toBe(true); // hedef 30 dk
+
+    const today = await (await request.get(`${API}/api/okuma/sessions?date=${TODAY}`, { headers })).json();
+    expect(today.total_min).toBe(35);
+    expect(today.total_pages).toBe(25);
+  });
+
+  test('süresiz ve sayfasız oturum 422', async ({ request }) => {
+    const { token } = await registerUser(request, 'okuma-empty');
+    const res = await request.post(`${API}/api/okuma/sessions?date=${TODAY}`, {
+      headers: auth(token),
+      data: { book_key: 'x' },
+    });
+    expect(res.status()).toBe(422);
+  });
+
+  test('yıllık hedef: varsayılan, ayar ve bitirilen kitaptan türetim', async ({ request }) => {
+    const { token } = await registerUser(request, 'okuma-goal');
+    const headers = auth(token);
+    const year = new Date().getUTCFullYear();
+
+    const def = await (await request.get(`${API}/api/okuma/goal?year=${year}`, { headers })).json();
+    expect(def.target_books).toBe(12);
+    expect(def.completed_books).toBe(0);
+    expect(def.is_custom).toBe(false);
+
+    const set = await (
+      await request.put(`${API}/api/okuma/goal?year=${year}`, { headers, data: { target_books: 24 } })
+    ).json();
+    expect(set.target_books).toBe(24);
+    expect(set.is_custom).toBe(true);
+
+    // Kitabı ekleyip bitir → completed_books türetilir.
+    await request.post(`${API}/api/okuma/books`, {
+      headers,
+      data: { title: 'Sefiller', authors: ['Victor Hugo'], isbn13: '9789944888332', shelf: 'reading', source: 'manual' },
+    });
+    await request.patch(`${API}/api/okuma/books/book_9789944888332`, { headers, data: { shelf: 'finished', rating: 5 } });
+    const after = await (await request.get(`${API}/api/okuma/goal?year=${year}`, { headers })).json();
+    expect(after.completed_books).toBe(1);
+
+    // Bitmişten çıkarınca sayaç düşer (finished_at temizlenir).
+    await request.patch(`${API}/api/okuma/books/book_9789944888332`, { headers, data: { shelf: 'reading' } });
+    const back = await (await request.get(`${API}/api/okuma/goal?year=${year}`, { headers })).json();
+    expect(back.completed_books).toBe(0);
+  });
+
+  test('istatistik bitirilen kitap, süre ve seriyi toplar', async ({ request }) => {
+    const { token } = await registerUser(request, 'okuma-stats');
+    const headers = auth(token);
+    await request.post(`${API}/api/okuma/books`, {
+      headers,
+      data: { title: 'Beyaz Diş', authors: ['Jack London'], isbn13: '9789944888349', page_count: 220, shelf: 'finished', source: 'manual' },
+    });
+    await request.post(`${API}/api/okuma/sessions?date=${TODAY}`, { headers, data: { duration_min: 40 } });
+    const stats = await (await request.get(`${API}/api/okuma/stats?date=${TODAY}`, { headers })).json();
+    expect(stats.finished_count).toBe(1);
+    expect(stats.total_minutes).toBe(40);
+    expect(stats.top_authors[0].name).toBe('Jack London');
+    expect(stats.streak).toBeGreaterThanOrEqual(1);
+    expect(stats.monthly.length).toBe(6);
+  });
+
+  test('içgörü kural-temelli yapı döner (llm kapalı)', async ({ request }) => {
+    const { token } = await registerUser(request, 'okuma-insight');
+    const headers = auth(token);
+    const insight = await (await request.get(`${API}/api/okuma/insight?date=${TODAY}`, { headers })).json();
+    expect(insight.source).toBe('rule');
+    expect(insight.headline).toBeTruthy();
+    expect(Array.isArray(insight.notes)).toBe(true);
+  });
+
+  test('okuma uçları oturum ister', async ({ request }) => {
+    for (const path of ['/api/okuma/meta', '/api/okuma/books', '/api/okuma/goal', '/api/okuma/stats']) {
+      expect((await request.get(`${API}${path}`)).status()).toBe(401);
+    }
+  });
+});

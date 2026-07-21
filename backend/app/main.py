@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 
 from .config import settings
 from .db import close, connect, ping
-from .routers import auth, brush, spor, tracker
+from .routers import appupdate, auth, brush, okuma, profile, spor, tracker, yemek
 
 logger = logging.getLogger("sup-port")
 
@@ -65,6 +65,10 @@ app.include_router(auth.router)
 app.include_router(tracker.router)
 app.include_router(brush.router)
 app.include_router(spor.router)
+app.include_router(okuma.router)
+app.include_router(yemek.router)
+app.include_router(profile.router)
+app.include_router(appupdate.router)
 
 
 @app.get("/health")

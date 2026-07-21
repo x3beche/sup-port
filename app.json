@@ -13,7 +13,7 @@
     "android": {
       "package": "app.support.tracker",
       "versionCode": 1,
-      "permissions": ["android.permission.VIBRATE"],
+      "permissions": ["android.permission.VIBRATE", "android.permission.CAMERA"],
       "adaptiveIcon": {
         "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -32,6 +32,14 @@
           "android": {
             "usesCleartextTraffic": true
           }
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "sup-port, kitap barkodlarını taramak için kameranı kullanır.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
         }
       ]
     ]

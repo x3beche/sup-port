@@ -91,10 +91,37 @@ class Settings:
             or "https://openrouter.ai/api/v1"
         )
 
+        # Kitap metadata proxy (okuma modülü). İstemci asla üçüncü tarafa doğrudan
+        # sormaz; tüm çağrılar backend'den bu iletişim e-postasıyla yapılır.
+        # Open Library, User-Agent + e-posta gördüğünde rate-limit'i 1→3 istek/sn'ye
+        # çıkarır (bkz. docs/features/okuma/research.md). API key opsiyoneldir;
+        # yalnızca Google Books kotasını kendi projene bağlamak istersen gerekir.
+        self.contact_email: str = (
+            os.getenv("CONTACT_EMAIL")
+            or data.get("contact_email")
+            or "destek@support.medipol.dev"
+        )
+        self.google_books_api_key: str | None = (
+            os.getenv("GOOGLE_BOOKS_API_KEY") or data.get("google_books_api_key")
+        )
+
         # Rate limiting is on by default (production). Test/CI turns it off so a
         # suite that registers many users from one IP isn't throttled.
         self.rate_limit_enabled: bool = _env_bool(
             os.getenv("RATE_LIMIT_ENABLED"), bool(data.get("rate_limit_enabled", True))
+        )
+
+        # Open Food Facts canlı barkod/arama proxy'si. Açık (production): yerel
+        # tabloda bulunmayan barkodlar OFF'tan çekilir. Test/CI kapatır ki ağa
+        # çıkmadan (deterministik, hızlı) çalışsın; yerel tablo yeter.
+        self.off_api_enabled: bool = _env_bool(
+            os.getenv("OFF_API_ENABLED"), bool(data.get("off_api_enabled", True))
+        )
+        # OFF zorunlu özel User-Agent (rate limit/iletişim için). Kendi alanımız.
+        self.off_user_agent: str = (
+            os.getenv("OFF_USER_AGENT")
+            or data.get("off_user_agent")
+            or "sup-port/1.0 (destek@sup-port.app)"
         )
 
         if not self.mongo_uri or not self.db_name:
