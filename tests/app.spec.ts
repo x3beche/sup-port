@@ -107,22 +107,21 @@ test.describe('Panel ve modüller', () => {
   test('hedef tamamlanınca tamamlandı rozeti çıkar', async ({ page }) => {
     await registerThroughUi(page, 'complete');
 
-    // Beslenme jenerik sayaçlı en küçük hedefli modül (3 öğün); diş fırçalama
-    // artık kendi ekranını kullandığı için ortak sayaç testi buna taşındı.
-    await page.getByTestId('tile-meal').click();
-    await expect(page.getByTestId('module-screen-meal')).toBeVisible();
+    // Su, jenerik sayaçlı sabit bir modül (brush/spor/okuma/yemek artık kendi
+    // zengin ekranlarını kullanıyor); ortak sayaç testi buna taşındı.
+    await page.getByTestId('tile-water').click();
+    await expect(page.getByTestId('module-screen-water')).toBeVisible();
 
-    // Meal target is 3 with step 1.
-    await page.getByTestId('increment-1').click();
-    await page.getByTestId('increment-1').click();
-    await page.getByTestId('increment-1').click();
+    // Water target is 8; +4 iki kez = 8.
+    await page.getByTestId('increment-4').click();
+    await page.getByTestId('increment-4').click();
 
-    await expect(page.getByTestId('module-value')).toContainText('3 / 3 öğün');
+    await expect(page.getByTestId('module-value')).toContainText('8 / 8 bardak');
   });
 
   test('geçmiş grafiği 7 gün çizer', async ({ page }) => {
     await registerThroughUi(page, 'chart');
-    await page.getByTestId('tile-reading').click();
+    await page.getByTestId('tile-water').click();
     await expect(page.getByTestId('history-chart')).toBeVisible();
     await expect(page.getByText('Son 7 gün')).toBeVisible();
   });
@@ -539,33 +538,32 @@ test.describe('Kişisel hedefler', () => {
   test('kullanıcı kendi hedefini belirleyebilir', async ({ page }) => {
     await registerThroughUi(page, 'ui-target');
 
-    await page.getByTestId('tile-meal').click();
-    await expect(page.getByTestId('target-value')).toContainText('3 öğün');
+    await page.getByTestId('tile-water').click();
+    await expect(page.getByTestId('target-value')).toContainText('8 bardak');
 
     await page.getByTestId('edit-target').click();
-    await page.getByTestId('target-input').fill('5');
+    await page.getByTestId('target-input').fill('12');
     await page.getByTestId('target-save').click();
 
-    await expect(page.getByTestId('target-value')).toContainText('5 öğün');
+    await expect(page.getByTestId('target-value')).toContainText('12 bardak');
     await expect(page.getByTestId('target-value')).toContainText('kendi hedefin');
-    await expect(page.getByTestId('module-value')).toContainText('/ 5 öğün');
+    await expect(page.getByTestId('module-value')).toContainText('/ 12 bardak');
   });
 
   test('yeni hedef tamamlanma durumunu yeniden hesaplar', async ({ page }) => {
     await registerThroughUi(page, 'ui-target-recalc');
 
-    await page.getByTestId('tile-meal').click();
-    await page.getByTestId('increment-1').click();
-    await page.getByTestId('increment-1').click();
-    await page.getByTestId('increment-1').click();
-    await expect(page.getByTestId('module-value')).toContainText('3 / 3 öğün');
+    await page.getByTestId('tile-water').click();
+    await page.getByTestId('increment-4').click();
+    await page.getByTestId('increment-4').click();
+    await expect(page.getByTestId('module-value')).toContainText('8 / 8 bardak');
 
     await page.getByTestId('edit-target').click();
-    await page.getByTestId('target-input').fill('5');
+    await page.getByTestId('target-input').fill('12');
     await page.getByTestId('target-save').click();
 
     // The target moved, so the same value is no longer complete.
-    await expect(page.getByTestId('module-value')).toContainText('3 / 5 öğün');
+    await expect(page.getByTestId('module-value')).toContainText('8 / 12 bardak');
   });
 
   test('hedef varsayılana döndürülebilir', async ({ page }) => {

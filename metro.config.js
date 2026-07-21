@@ -11,6 +11,12 @@ config.resolver.blockList = [
   /\/android\/.*/,
   /\/ios\/.*/,
   /\/backend\/\.venv\/.*/,
+  // expo-camera vb. iOS/macOS Swift prebuild framework'leri (binlerce dosya) web/
+  // android geliştirme sunucusunda gereksiz; izlenince inotify limiti dolup
+  // Metro ENOSPC ile düşüyordu.
+  /\/node_modules\/[^/]+\/prebuilds\/.*/,
+  /\.xcframework\/.*/,
+  /\/dist-[^/]+\/.*/,
 ];
 
 module.exports = config;

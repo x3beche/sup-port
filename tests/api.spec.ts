@@ -227,11 +227,16 @@ test.describe('Kademe kullanımı', () => {
 });
 
 test.describe('Mağaza', () => {
-  test('yeni kullanıcıda her şey kurulu', async ({ request }) => {
+  test('yeni kullanıcıda aktif modüller kurulu, "yakında" kurulamaz', async ({ request }) => {
     const { token } = await registerUser(request, 'store');
     const apps = await (await request.get(`${API}/api/store`, { headers: auth(token) })).json();
-    expect(apps).toHaveLength(9);
-    expect(apps.every((a: { installed: boolean }) => a.installed)).toBe(true);
+    // Aktif (coming_soon olmayan) modüller yeni kullanıcıda kuruludur; "yakında"
+    // modülleri kurulamaz (kurulu değil).
+    const active = apps.filter((a: { coming_soon?: boolean }) => !a.coming_soon);
+    const soon = apps.filter((a: { coming_soon?: boolean }) => a.coming_soon);
+    expect(active.length).toBeGreaterThanOrEqual(9);
+    expect(active.every((a: { installed: boolean }) => a.installed)).toBe(true);
+    expect(soon.every((a: { installed: boolean }) => !a.installed)).toBe(true);
     for (const a of apps) {
       expect(a.about.length).toBeGreaterThan(20);
       expect(a.category).toBeTruthy();
@@ -1081,5 +1086,53 @@ test.describe('Okuma — kütüphane ve oturum', () => {
     for (const path of ['/api/okuma/meta', '/api/okuma/books', '/api/okuma/goal', '/api/okuma/stats']) {
       expect((await request.get(`${API}${path}`)).status()).toBe(401);
     }
+  });
+});
+
+// Genel kullanıcı profili — vücut bilgileri bir kez girilir; modüller (spor,
+// yemek) aynı paylaşılan profili okur (tekrar sormaz) + kilo/BMI timeline.
+test.describe('Profil — paylaşılan vücut bilgileri', () => {
+  test('boş profil, PUT sonrası BMI ve paylaşım', async ({ request }) => {
+    const { token } = await registerUser(request, 'profile');
+    const headers = auth(token);
+
+    const empty = await (await request.get(`${API}/api/profile`, { headers })).json();
+    expect(empty.has_body_info).toBe(false);
+
+    const set = await (
+      await request.put(`${API}/api/profile`, {
+        headers,
+        data: { age: 30, sex: 'erkek', height_cm: 175, weight_kg: 82, goal: 'ver', target_weight_kg: 75 },
+      })
+    ).json();
+    // BMI = 82 / 1.75^2 = 26.8 → fazla kilolu
+    expect(set.bmi).toBe(26.8);
+    expect(set.bmi_category).toBe('fazla_kilolu');
+    expect(set.age).toBe(30);
+    expect(set.has_body_info).toBe(true);
+
+    // Aynı profili spor ve yemek modülleri de görür (paylaşım).
+    const spor = await (await request.get(`${API}/api/spor/profile`, { headers })).json();
+    expect(spor.height_cm).toBe(175);
+    expect(spor.goal).toBe('ver');
+    const yemek = await (await request.get(`${API}/api/yemek/profile`, { headers })).json();
+    expect(yemek.age).toBe(30);
+    expect(yemek.height_cm).toBe(175);
+  });
+
+  test('kilo girişleri timeline’a düşer', async ({ request }) => {
+    const { token } = await registerUser(request, 'profile-tl');
+    const headers = auth(token);
+    await request.put(`${API}/api/profile`, { headers, data: { height_cm: 180, weight_kg: 90 } });
+    const tl = await (await request.get(`${API}/api/profile/timeline?days=30`, { headers })).json();
+    expect(tl.count).toBe(1);
+    expect(tl.points[0].weight_kg).toBe(90);
+    expect(tl.points[0].bmi).toBe(27.8); // 90 / 1.8^2
+  });
+
+  test('profil uçları oturum ister', async ({ request }) => {
+    expect((await request.get(`${API}/api/profile`)).status()).toBe(401);
+    expect((await request.put(`${API}/api/profile`, { data: { age: 20 } })).status()).toBe(401);
+    expect((await request.get(`${API}/api/profile/timeline`)).status()).toBe(401);
   });
 });
