@@ -22,15 +22,13 @@ jobs:
       ENDPOINT_ID: 3
       STACK_ID: 27
       VERSION_URL: https://support.medipol.dev/version
-      REPO_USERNAME: x3beche
     steps:
       - name: Trigger Portainer pull & redeploy with GIT_SHA
         env:
-          # Secrets (Settings > Secrets and variables > Actions > Secrets):
+          # Tek secret gerekli (Settings > Secrets and variables > Actions):
           #   PORTAINER_TOKEN  Portainer API anahtarı (X-API-Key)
-          #   GH_PAT           repoyu çekmek için GitHub token (repo scope)
+          # Repo public olduğu için Portainer klonlarken GitHub token istemiyor.
           PORTAINER_TOKEN: ${{ secrets.PORTAINER_TOKEN }}
-          GH_PAT: ${{ secrets.GH_PAT }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
@@ -65,15 +63,11 @@ jobs:
           ')
 
           payload=$(jq -nc \
-            --arg pwd "$GH_PAT" \
-            --arg user "$REPO_USERNAME" \
             --argjson env "$env_array" \
             '{
               RepositoryReferenceName: "refs/heads/master",
               PullImage: false,
-              RepositoryAuthentication: true,
-              RepositoryUsername: $user,
-              RepositoryPassword: $pwd,
+              RepositoryAuthentication: false,
               Env: $env
             }')
 
