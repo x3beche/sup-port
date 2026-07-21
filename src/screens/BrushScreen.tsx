@@ -63,7 +63,11 @@ export function BrushScreen({
   const [timerOpen, setTimerOpen] = useState(false);
   const [confetti, setConfetti] = useState(0);
   const [milestone, setMilestone] = useState<number | null>(null);
-  const busy = useRef(false);
+  // Yuva yazımlarını sıraya dizer: eşzamanlı dokunuşlar (sabah hemen ardından
+  // akşam) düşürülmez, tek tek ve sırayla gönderilir. Böylece hızlı kullanıcıda
+  // da, yavaş ağda da ikinci dokunuş kaybolmaz ve backend istekleri seri kalır
+  // (denormalize `complete` alanındaki yarış önlenir).
+  const chain = useRef<Promise<void>>(Promise.resolve());
 
   const applyStatus = useCallback(
     (next: BrushStatus) => {
@@ -81,26 +85,28 @@ export function BrushScreen({
   );
 
   const setSlot = useCallback(
-    async (slot: BrushSlot, done: boolean) => {
-      if (busy.current || !token) return;
-      busy.current = true;
+    (slot: BrushSlot, done: boolean) => {
+      if (!token) return;
       setError(null);
       if (done) haptics.slot();
-      try {
-        const next = await apiRequest<BrushStatus>(`/api/brush/slot?date=${today}`, {
-          method: 'PUT',
-          body: { slot, done },
-          token,
+      // Önceki isteğin ardına ekle; hatası bir sonraki dokunuşu engellemesin.
+      chain.current = chain.current
+        .catch(() => {})
+        .then(async () => {
+          try {
+            const next = await apiRequest<BrushStatus>(`/api/brush/slot?date=${today}`, {
+              method: 'PUT',
+              body: { slot, done },
+              token,
+            });
+            applyStatus(next);
+            // Entries de değişti; geçmiş şeridini tazele.
+            void refreshHistory();
+          } catch (err) {
+            setError((err as Error)?.message ?? 'Kaydedilemedi');
+            void refresh();
+          }
         });
-        applyStatus(next);
-        // Entries de değişti; geçmiş şeridini tazele.
-        void refreshHistory();
-      } catch (err) {
-        setError((err as Error)?.message ?? 'Kaydedilemedi');
-        void refresh();
-      } finally {
-        busy.current = false;
-      }
     },
     [applyStatus, refresh, refreshHistory, today, token],
   );
