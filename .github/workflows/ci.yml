@@ -63,8 +63,30 @@ jobs:
       - name: TypeScript tip kontrolü
         run: npx tsc --noEmit
 
+      # Tarayıcı ikili dosyalarını (~150MB) önbellekle: her koşuda yeniden
+      # indirilmez, ağ dalgalanmalarına daha dayanıklı olur.
+      - name: Playwright tarayıcı önbelleği
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
       - name: Playwright tarayıcısı
-        run: npx playwright install --with-deps chromium
+        # Azure apt aynası ara sıra çok yavaş kalıp adımı kilitliyor; 3 kez
+        # dener, aralarda kısa bekler. Böylece geçici ağ/apt hataları CI'ı
+        # kırmıyor.
+        run: |
+          for i in 1 2 3; do
+            if npx playwright install --with-deps chromium; then
+              exit 0
+            fi
+            echo "::warning::Playwright kurulumu denemesi $i başarısız — 15 sn sonra tekrar denenecek"
+            sleep 15
+          done
+          echo "::error::Playwright kurulumu 3 denemede de başarısız oldu"
+          exit 1
 
       - name: Backend'i başlat
         run: |
