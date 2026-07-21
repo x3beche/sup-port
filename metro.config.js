@@ -8,6 +8,8 @@ const config = getDefaultConfig(__dirname);
 config.resolver.blockList = [
   /\/tests\/\.artifacts\/.*/,
   /\/tests\/\.report\/.*/,
+  /\/android\/.*/,
+  /\/ios\/.*/,
   /\/backend\/\.venv\/.*/,
 ];
 

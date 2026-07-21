@@ -5,7 +5,7 @@ import type { ModuleProgress } from '../types';
 import { ModuleTile } from './ModuleTile';
 
 const COLUMNS = 4;
-const CELL_HEIGHT = 108;
+const CELL_HEIGHT = 120;
 /** Bu eşiği aşan hareket dokunuş değil sürükleme sayılır. */
 const DRAG_THRESHOLD = 8;
 

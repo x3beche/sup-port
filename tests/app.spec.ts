@@ -326,6 +326,92 @@ test.describe('Izgara düzeni', () => {
   });
 });
 
+test.describe('Uygulama mağazası', () => {
+  test('mağaza açılır ve tüm uygulamaları kategorilerle listeler', async ({ page }) => {
+    await registerThroughUi(page, 'store');
+    await page.getByTestId('open-store').click();
+
+    await expect(page.getByTestId('store-screen')).toBeVisible();
+    for (const key of ['water', 'steps', 'meditation', 'english']) {
+      await expect(page.getByTestId(`store-app-${key}`)).toBeVisible();
+    }
+    await expect(page.getByText('Sağlık')).toBeVisible();
+    await expect(page.getByText('Öğrenme')).toBeVisible();
+  });
+
+  test('uygulama kaldırılınca ana ekrandan çıkar, geri kurulunca döner', async ({ page }) => {
+    await registerThroughUi(page, 'store-uninstall');
+    await expect(page.getByTestId('tile-meditation')).toBeVisible();
+
+    await page.getByTestId('open-store').click();
+    await page.getByTestId('store-app-meditation').click();
+    await expect(page.getByTestId('store-detail-meditation')).toBeVisible();
+    await expect(page.getByTestId('detail-toggle')).toContainText('Kaldır');
+
+    await page.getByTestId('detail-toggle').click();
+    await expect(page.getByTestId('detail-toggle')).toContainText('Kur');
+
+    await page.getByTestId('detail-back').click();
+    await page.getByTestId('store-back').click();
+    await expect(page.getByTestId('home-screen')).toBeVisible();
+    // Uninstalling removes it from the grid.
+    await expect(page.getByTestId('tile-meditation')).toHaveCount(0);
+
+    // Reinstall brings it back.
+    await page.getByTestId('open-store').click();
+    await page.getByTestId('store-app-meditation').click();
+    await page.getByTestId('detail-toggle').click();
+    await expect(page.getByTestId('detail-toggle')).toContainText('Kaldır');
+    await page.getByTestId('detail-back').click();
+    await page.getByTestId('store-back').click();
+    await expect(page.getByTestId('tile-meditation')).toBeVisible({ timeout: 30_000 });
+  });
+
+  test('kaldırılan uygulamanın verisi geri kurulunca korunur', async ({ page }) => {
+    await registerThroughUi(page, 'store-data');
+
+    // Log a value, uninstall, reinstall — the value must survive.
+    await page.getByTestId('tile-water').click();
+    await page.getByTestId('increment-1').click();
+    await page.getByTestId('increment-1').click();
+    await expect(page.getByTestId('module-value')).toContainText('2');
+    await page.getByTestId('back').click();
+
+    await page.getByTestId('open-store').click();
+    await page.getByTestId('store-app-water').click();
+    await page.getByTestId('detail-toggle').click(); // kaldır
+    await expect(page.getByTestId('detail-toggle')).toContainText('Kur');
+    await page.getByTestId('detail-toggle').click(); // geri kur
+    await expect(page.getByTestId('detail-toggle')).toContainText('Kaldır');
+    await page.getByTestId('detail-back').click();
+    await page.getByTestId('store-back').click();
+
+    await page.getByTestId('tile-water').click();
+    await expect(page.getByTestId('module-value')).toContainText('2', { timeout: 30_000 });
+  });
+
+  test('tüm uygulamalar kaldırılınca boş durum gösterilir', async ({ page }) => {
+    await registerThroughUi(page, 'store-empty');
+    // Faster than clicking eight times: drive the API, then reload the grid.
+    await page.evaluate(async () => {
+      const raw = localStorage.getItem('support:session');
+      const token = JSON.parse(raw!).token;
+      const store = await (await fetch('http://localhost:4000/api/store', {
+        headers: { Authorization: `Bearer ${token}` },
+      })).json();
+      for (const app of store) {
+        await fetch(`http://localhost:4000/api/store/${app.key}/install`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    });
+    await page.reload();
+    await expect(page.getByTestId('empty-grid')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Hiç uygulama kurulu değil')).toBeVisible();
+  });
+});
+
 test.describe('Kişisel hedefler', () => {
   test('kullanıcı kendi hedefini belirleyebilir', async ({ page }) => {
     await registerThroughUi(page, 'ui-target');

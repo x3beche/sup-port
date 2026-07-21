@@ -1,0 +1,94 @@
+name: Release APK
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'APK içine gömülecek API adresi (telefon bu adrese ulaşabilmeli)'
+        required: true
+        default: 'http://10.40.30.213:4000'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Android APK derle
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    env:
+      # Standalone APK'da Metro host'u yok; adres derleme anında gömülüyor.
+      EXPO_PUBLIC_API_URL: ${{ github.event.inputs.api_url || 'http://10.40.30.213:4000' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Node bağımlılıkları
+        run: npm ci
+
+      - name: Android projesini üret
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Gradle önbelleği
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Release APK derle
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
+
+      - name: APK'yı adlandır
+        id: apk
+        run: |
+          VERSION="${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}"
+          SRC=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          if [ -z "$SRC" ]; then echo "APK bulunamadı"; exit 1; fi
+          DEST="sup-port-${VERSION}.apk"
+          cp "$SRC" "$DEST"
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+          ls -lh "$DEST"
+
+      - name: Artefakt olarak yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sup-port-apk
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+
+      - name: Release oluştur (yalnızca tag'de)
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            "${{ steps.apk.outputs.path }}" \
+            --title "sup-port ${{ github.ref_name }}" \
+            --notes "Kişisel gelişim superapp'inin ilk sürümü.
+
+          **Kurulum:** APK'yı Samsung Galaxy S23'e indirip aç, bilinmeyen kaynaklara izin ver.
+
+          **Önemli:** Uygulama backend'e \`$EXPO_PUBLIC_API_URL\` adresinden bağlanır.
+          Telefon bu adresle aynı ağda olmalı ve backend çalışıyor olmalıdır.
+          Farklı bir adres için workflow_dispatch ile yeniden derleyin."

@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { DraggableGrid } from '../components/DraggableGrid';
+import { Icon } from '../components/Icon';
 import { SummaryCard } from '../components/SummaryCard';
 import { StepPad } from '../components/StepPad';
 import { WeeklyChart } from '../components/WeeklyChart';
@@ -27,7 +28,13 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
   weekday: 'long',
 };
 
-export function HomeScreen({ onOpenModule }: { onOpenModule: (m: ModuleProgress) => void }) {
+export function HomeScreen({
+  onOpenModule,
+  onOpenStore,
+}: {
+  onOpenModule: (m: ModuleProgress) => void;
+  onOpenStore: () => void;
+}) {
   const { user, token, logout } = useAuth();
   const today = todayIso();
 
@@ -175,15 +182,36 @@ export function HomeScreen({ onOpenModule }: { onOpenModule: (m: ModuleProgress)
 
       {week?.length ? <WeeklyChart days={week} /> : null}
 
-      <Text style={styles.sectionTitle}>Uygulamalar</Text>
+      <View style={styles.sectionHead}>
+        <Text style={styles.sectionTitle}>Uygulamalar</Text>
+        <Pressable
+          onPress={onOpenStore}
+          testID="open-store"
+          accessibilityRole="button"
+          accessibilityLabel="Uygulama mağazasını aç"
+          style={({ pressed }) => [styles.storeButton, pressed && styles.storePressed]}
+        >
+          <Icon name="plus" size={16} strokeWidth={2.2} color={theme.color.accent} />
+          <Text style={styles.storeText}>Mağaza</Text>
+        </Pressable>
+      </View>
 
-      <DraggableGrid
-        modules={modules}
-        onOpen={onOpenModule}
-        onQuickAdd={openQuickAdd}
-        onReorder={saveOrder}
-        activeKey={quickAdd?.key}
-      />
+      {modules.length === 0 ? (
+        <Pressable onPress={onOpenStore} testID="empty-grid" style={styles.empty}>
+          <Text style={styles.emptyTitle}>Hiç uygulama kurulu değil</Text>
+          <Text style={styles.emptyText}>
+            Takip etmek istediğin alanları mağazadan ekle.
+          </Text>
+        </Pressable>
+      ) : (
+        <DraggableGrid
+          modules={modules}
+          onOpen={onOpenModule}
+          onQuickAdd={openQuickAdd}
+          onReorder={saveOrder}
+          activeKey={quickAdd?.key}
+        />
+      )}
 
       {/* Long-press keeps the common case — log today's value — on the home
           screen instead of costing a round trip into the module and back. */}
@@ -266,12 +294,49 @@ const styles = StyleSheet.create({
     color: theme.color.warnText,
     fontWeight: '600',
   },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: theme.space(8),
+    marginBottom: theme.space(5),
+  },
   sectionTitle: {
     fontSize: theme.font.heading,
     fontWeight: '700',
     color: theme.color.text,
-    marginTop: theme.space(7),
-    marginBottom: theme.space(4),
+  },
+  storeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space(1),
+    minHeight: 44,
+    paddingHorizontal: theme.space(3),
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.color.accentSoft,
+  },
+  storePressed: { opacity: 0.7 },
+  storeText: {
+    fontSize: theme.font.label,
+    fontWeight: '700',
+    color: theme.color.accent,
+  },
+  empty: {
+    backgroundColor: theme.color.card,
+    borderRadius: theme.radius.lg,
+    padding: theme.space(6),
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: theme.font.body,
+    fontWeight: '700',
+    color: theme.color.text,
+  },
+  emptyText: {
+    marginTop: theme.space(2),
+    fontSize: theme.font.label,
+    color: theme.color.textMuted,
+    textAlign: 'center',
   },
   quickAdd: {
     marginTop: theme.space(6),

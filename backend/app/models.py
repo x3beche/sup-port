@@ -95,6 +95,19 @@ class DailySummary(BaseModel):
     modules: list[ModuleProgress]
 
 
+class StoreApp(BaseModel):
+    key: str
+    title: str
+    icon: str
+    color: str
+    category: str
+    description: str
+    about: str
+    unit: str
+    target: float
+    installed: bool
+
+
 class OrderUpdate(BaseModel):
     order: list[str] = Field(min_length=1, max_length=100)
 

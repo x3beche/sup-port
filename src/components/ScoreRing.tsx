@@ -47,6 +47,11 @@ export function ScoreRing({
   const dashOffset = circumference * (1 - shown / 100);
   const center = size / 2;
 
+  // The number has to scale with the ring: a fixed hero size overflowed the
+  // 64px compact ring ("17" spilled past the stroke). Capped so the large ring
+  // keeps its intended size.
+  const fontSize = Math.min(theme.font.hero, Math.round(size * 0.3));
+
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size}>
@@ -74,7 +79,11 @@ export function ScoreRing({
       </Svg>
 
       <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">
-        <Text style={styles.score} accessibilityLabel={`Yüzde ${target}`}>
+        <Text
+          style={[styles.score, { fontSize, letterSpacing: fontSize > 30 ? -1 : 0 }]}
+          accessibilityLabel={`Yüzde ${target}`}
+          numberOfLines={1}
+        >
           {Math.round(shown)}
         </Text>
       </View>
@@ -88,10 +97,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   score: {
-    fontSize: theme.font.hero,
     fontWeight: '800',
     color: theme.color.text,
-    letterSpacing: -1,
     ...tabularNums,
   },
 });

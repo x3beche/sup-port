@@ -12,6 +12,7 @@ from ..models import (
     ModuleProgress,
     ModuleTarget,
     OrderUpdate,
+    StoreApp,
     TargetUpdate,
     WeekDay,
 )
@@ -20,6 +21,7 @@ from ..targets import (
     custom_targets,
     effective_target,
     favorite_step,
+    installed_keys,
     ordered_modules,
     usage_field,
 )
@@ -268,6 +270,7 @@ async def weekly_summary(
         by_day.setdefault(doc["date"], {})[doc["module"]] = doc["value"]
 
     overrides = custom_targets(user)
+    installed = ordered_modules(user, MODULES)
     today = end.isoformat()
 
     result: list[WeekDay] = []
@@ -276,7 +279,7 @@ async def weekly_summary(
         values = by_day.get(day, {})
         ratios = []
         completed = 0
-        for module in MODULES:
+        for module in installed:
             target = overrides.get(module.key, module.target)
             ratio = min(float(values.get(module.key, 0)) / target, 1.0) if target else 0.0
             ratios.append(ratio)
@@ -287,7 +290,7 @@ async def weekly_summary(
                 date=date_type.fromisoformat(day),
                 score=round(sum(ratios) / len(ratios) * 100) if ratios else 0,
                 completed_count=completed,
-                module_count=len(MODULES),
+                module_count=len(installed),
                 is_today=day == today,
             )
         )
@@ -318,3 +321,50 @@ async def set_order(payload: OrderUpdate, user: dict = Depends(current_user)):
         {"$set": {"module_order": payload.order}},
     )
     return [m.key for m in ordered_modules({**user, "module_order": payload.order}, MODULES)]
+
+
+def _store_app(module, installed: set[str]) -> StoreApp:
+    return StoreApp(
+        key=module.key,
+        title=module.title,
+        icon=module.icon,
+        color=module.color,
+        category=module.category,
+        description=module.description,
+        about=module.about,
+        unit=module.unit,
+        target=module.target,
+        installed=module.key in installed,
+    )
+
+
+@router.get("/store", response_model=list[StoreApp])
+async def store(user: dict = Depends(current_user)):
+    installed = set(installed_keys(user))
+    return [_store_app(m, installed) for m in MODULES]
+
+
+@router.post("/store/{module_key}/install", response_model=StoreApp)
+async def install_app(module_key: str, user: dict = Depends(current_user)):
+    module = _module_or_404(module_key)
+    # Write the full explicit list. A naive $addToSet on an absent field would
+    # collapse the implicit "all installed" default down to just this one app.
+    current = installed_keys(user)
+    updated = current if module.key in current else current + [module.key]
+    await _users().update_one(
+        {"_id": user["_id"]},
+        {"$set": {"installed_modules": updated}},
+    )
+    return _store_app(module, set(updated))
+
+
+@router.delete("/store/{module_key}/install", response_model=StoreApp)
+async def uninstall_app(module_key: str, user: dict = Depends(current_user)):
+    module = _module_or_404(module_key)
+    remaining = [k for k in installed_keys(user) if k != module.key]
+    # Entries and targets are kept, so reinstalling restores the history.
+    await _users().update_one(
+        {"_id": user["_id"]},
+        {"$set": {"installed_modules": remaining}},
+    )
+    return _store_app(module, set(remaining))

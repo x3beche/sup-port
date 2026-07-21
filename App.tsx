@@ -3,32 +3,48 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, SafeAreaView, StyleSheet, View } from 'react-native';
 import { ScreenTransition } from './src/components/ScreenTransition';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { hideScrollbars } from './src/lib/webChrome';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ModuleScreen } from './src/screens/ModuleScreen';
-import { hideScrollbars } from './src/lib/webChrome';
+import { StoreDetailScreen } from './src/screens/StoreDetailScreen';
+import { StoreScreen } from './src/screens/StoreScreen';
 import { theme } from './src/theme';
-import type { ModuleProgress } from './src/types';
+import type { ModuleProgress, StoreApp } from './src/types';
+
+type Route =
+  | { name: 'home' }
+  | { name: 'module'; module: ModuleProgress }
+  | { name: 'store' }
+  | { name: 'storeDetail'; app: StoreApp };
 
 /**
- * Two screens deep is all the shell needs today, so this stays a plain state
- * switch instead of pulling in a navigator. Swap for expo-router when the
- * modules need deep links or their own nested stacks.
+ * A small route stack instead of a navigator: the app is only ever a couple of
+ * screens deep. Swap for expo-router when modules need deep links or their own
+ * nested stacks.
  */
 function Shell() {
   const { token, initialising } = useAuth();
-  const [openModule, setOpenModule] = useState<ModuleProgress | null>(null);
-  // Remembering how we got here is what lets "back" slide the other way.
+  const [route, setRoute] = useState<Route>({ name: 'home' });
+  // Direction drives the slide: forward on push, backward on pop.
   const [goingBack, setGoingBack] = useState(false);
+  // Bumped when the store changes an install, so Home remounts and refetches.
+  const [homeVersion, setHomeVersion] = useState(0);
 
-  const openDetail = useCallback((module: ModuleProgress) => {
+  const push = useCallback((next: Route) => {
     setGoingBack(false);
-    setOpenModule(module);
+    setRoute(next);
   }, []);
 
-  const closeDetail = useCallback(() => {
+  const goHome = useCallback((changed = false) => {
     setGoingBack(true);
-    setOpenModule(null);
+    if (changed) setHomeVersion((v) => v + 1);
+    setRoute({ name: 'home' });
+  }, []);
+
+  const goStore = useCallback(() => {
+    setGoingBack(true);
+    setRoute({ name: 'store' });
   }, []);
 
   if (initialising) {
@@ -47,18 +63,44 @@ function Shell() {
     );
   }
 
-  if (openModule) {
+  if (route.name === 'module') {
     return (
-      // Keying on the module makes each open re-run the entrance animation.
-      <ScreenTransition key={`module-${openModule.key}`} direction="forward">
-        <ModuleScreen module={openModule} onBack={closeDetail} />
+      <ScreenTransition key={`module-${route.module.key}`} direction="forward">
+        <ModuleScreen module={route.module} onBack={() => goHome()} />
+      </ScreenTransition>
+    );
+  }
+
+  if (route.name === 'store') {
+    return (
+      <ScreenTransition key="store" direction={goingBack ? 'backward' : 'forward'}>
+        <StoreScreen
+          onBack={() => goHome()}
+          onOpenApp={(app) => push({ name: 'storeDetail', app })}
+        />
+      </ScreenTransition>
+    );
+  }
+
+  if (route.name === 'storeDetail') {
+    return (
+      <ScreenTransition key={`store-${route.app.key}`} direction="forward">
+        <StoreDetailScreen
+          app={route.app}
+          onBack={goStore}
+          // An install/uninstall must reach Home so the grid reflects it.
+          onChanged={() => setHomeVersion((v) => v + 1)}
+        />
       </ScreenTransition>
     );
   }
 
   return (
-    <ScreenTransition key="home" direction={goingBack ? 'backward' : 'fade'}>
-      <HomeScreen onOpenModule={openDetail} />
+    <ScreenTransition key={`home-${homeVersion}`} direction={goingBack ? 'backward' : 'fade'}>
+      <HomeScreen
+        onOpenModule={(module) => push({ name: 'module', module })}
+        onOpenStore={goStore}
+      />
     </ScreenTransition>
   );
 }

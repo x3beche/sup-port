@@ -4,7 +4,7 @@ Hedefler kullanıcı belgesinde `targets` alanında saklanır: oturum doğrulama
 zaten o belgeyi okuduğu için hedefleri okumak ek sorgu maliyeti getirmez.
 """
 
-from .modules import Module
+from .modules import DEFAULT_INSTALLED, Module
 
 
 def custom_targets(user: dict) -> dict[str, float]:
@@ -54,16 +54,18 @@ def usage_field(module_key: str, step: float) -> str:
 
 
 def ordered_modules(user: dict, modules: tuple[Module, ...]) -> list[Module]:
-    """Kullanıcının kendi sıralaması; kayıtta olmayan modüller sona eklenir.
+    """Kurulu modüller, kullanıcının sıralamasında.
 
-    Yeni bir modül eklendiğinde eski sıralamalar bozulmasın diye eksikler
-    sessizce sona iliştirilir, bilinmeyen anahtarlar yok sayılır.
+    Yalnızca kurulu modüller döner: kaldırılan bir modül ana ekrandan ve
+    puandan çıkar. Sıralamada olmayan kurulu modüller (ör. yeni kurulan) sona
+    eklenir; bilinmeyen anahtarlar yok sayılır.
     """
+    installed = installed_modules(user, modules)
     saved = user.get("module_order")
     if not isinstance(saved, list):
-        return list(modules)
+        return installed
 
-    by_key = {m.key: m for m in modules}
+    by_key = {m.key: m for m in installed}
     seen: set[str] = set()
     result: list[Module] = []
     for key in saved:
@@ -72,5 +74,24 @@ def ordered_modules(user: dict, modules: tuple[Module, ...]) -> list[Module]:
             seen.add(module.key)
             result.append(module)
 
-    result.extend(m for m in modules if m.key not in seen)
+    result.extend(m for m in installed if m.key not in seen)
     return result
+
+
+def installed_keys(user: dict) -> list[str]:
+    """Kullanıcının kurduğu modüller; kayıt yoksa varsayılan set.
+
+    Alan hiç yoksa (eski kullanıcı) varsayılan olarak hepsi kurulu sayılır,
+    böylece mağaza eklenince kimsenin ızgarası boşalmaz.
+    """
+    saved = user.get("installed_modules")
+    if not isinstance(saved, list):
+        return list(DEFAULT_INSTALLED)
+    valid = {m for m in saved if isinstance(m, str)}
+    # Kayıt sırasını değil, modül kayıt sırasını koru; sıralama /order işi.
+    return [key for key in DEFAULT_INSTALLED if key in valid]
+
+
+def installed_modules(user: dict, modules: tuple[Module, ...]) -> list[Module]:
+    keys = set(installed_keys(user))
+    return [m for m in modules if m.key in keys]

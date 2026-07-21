@@ -60,3 +60,16 @@ export type WeekDay = {
   module_count: number;
   is_today: boolean;
 };
+
+export type StoreApp = {
+  key: string;
+  title: string;
+  icon: string;
+  color: string;
+  category: string;
+  description: string;
+  about: string;
+  unit: string;
+  target: number;
+  installed: boolean;
+};

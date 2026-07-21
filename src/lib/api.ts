@@ -8,6 +8,8 @@ const API_PORT = 4000;
  * reuse the host Metro is already served from, which is the dev machine's LAN IP.
  */
 function resolveBaseUrl(): string {
+  // Baked in at build time for standalone APKs, where there is no Metro host to
+  // discover. Set via EXPO_PUBLIC_API_URL before `expo prebuild`.
   const fromEnv = process.env.EXPO_PUBLIC_API_URL;
   if (fromEnv) return fromEnv.replace(/\/$/, '');
 
@@ -15,9 +17,17 @@ function resolveBaseUrl(): string {
     return `${window.location.protocol}//${window.location.hostname}:${API_PORT}`;
   }
 
+  // In Expo Go / dev the phone reaches the dev machine over Metro's LAN host.
   const hostUri = Constants.expoConfig?.hostUri ?? Constants.expoGoConfig?.debuggerHost;
   const host = hostUri?.split(':')[0];
-  return host ? `http://${host}:${API_PORT}` : `http://localhost:${API_PORT}`;
+  if (host) return `http://${host}:${API_PORT}`;
+
+  // A release APK with no baked URL would fall back to localhost — the phone
+  // itself — and silently fail every request. Surface that instead.
+  if (__DEV__ === false) {
+    console.warn('EXPO_PUBLIC_API_URL tanımlı değil; API adresi çözümlenemiyor.');
+  }
+  return `http://localhost:${API_PORT}`;
 }
 
 export const API_BASE = resolveBaseUrl();

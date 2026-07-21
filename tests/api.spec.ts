@@ -226,6 +226,77 @@ test.describe('Kademe kullanımı', () => {
   });
 });
 
+test.describe('Mağaza', () => {
+  test('yeni kullanıcıda her şey kurulu', async ({ request }) => {
+    const { token } = await registerUser(request, 'store');
+    const apps = await (await request.get(`${API}/api/store`, { headers: auth(token) })).json();
+    expect(apps).toHaveLength(8);
+    expect(apps.every((a: { installed: boolean }) => a.installed)).toBe(true);
+    for (const a of apps) {
+      expect(a.about.length).toBeGreaterThan(20);
+      expect(a.category).toBeTruthy();
+    }
+  });
+
+  test('kaldırma özetten ve sıradan çıkarır', async ({ request }) => {
+    const { token } = await registerUser(request, 'store-remove');
+    const headers = auth(token);
+
+    const removed = await (
+      await request.delete(`${API}/api/store/meditation/install`, { headers })
+    ).json();
+    expect(removed).toMatchObject({ key: 'meditation', installed: false });
+
+    const summary = await (await request.get(`${API}/api/summary?date=${TODAY}`, { headers })).json();
+    expect(summary.modules.some((m: { key: string }) => m.key === 'meditation')).toBe(false);
+    expect(summary.module_count).toBe(7);
+
+    const order = await (await request.get(`${API}/api/order`, { headers })).json();
+    expect(order).not.toContain('meditation');
+  });
+
+  test('kaldırılan modülün verisi ve hedefi geri kurulunca durur', async ({ request }) => {
+    const { token } = await registerUser(request, 'store-keep');
+    const headers = auth(token);
+
+    await request.put(`${API}/api/entries/reading?date=${TODAY}`, { headers, data: { value: 25 } });
+    await request.put(`${API}/api/targets/reading`, { headers, data: { target: 45 } });
+
+    await request.delete(`${API}/api/store/reading/install`, { headers });
+    const reinstalled = await (
+      await request.post(`${API}/api/store/reading/install`, { headers })
+    ).json();
+    expect(reinstalled.installed).toBe(true);
+
+    const summary = await (await request.get(`${API}/api/summary?date=${TODAY}`, { headers })).json();
+    const reading = summary.modules.find((m: { key: string }) => m.key === 'reading');
+    // Entries and targets are never deleted, only hidden.
+    expect(reading.value).toBe(25);
+    expect(reading.target).toBe(45);
+  });
+
+  test('kurma idempotent, bilinmeyen 404, uçlar oturum ister', async ({ request }) => {
+    const { token } = await registerUser(request, 'store-edge');
+    const headers = auth(token);
+
+    // Installing an already-installed app is a no-op, not an error.
+    expect((await request.post(`${API}/api/store/water/install`, { headers })).status()).toBe(200);
+    expect((await request.post(`${API}/api/store/uydurma/install`, { headers })).status()).toBe(404);
+    expect((await request.get(`${API}/api/store`)).status()).toBe(401);
+    expect((await request.post(`${API}/api/store/water/install`)).status()).toBe(401);
+  });
+
+  test('kurulum kullanıcıya özel', async ({ request }) => {
+    const a = await registerUser(request, 'store-iso-a');
+    const b = await registerUser(request, 'store-iso-b');
+
+    await request.delete(`${API}/api/store/steps/install`, { headers: auth(a.token) });
+
+    const appsB = await (await request.get(`${API}/api/store`, { headers: auth(b.token) })).json();
+    expect(appsB.find((x: { key: string }) => x.key === 'steps').installed).toBe(true);
+  });
+});
+
 test.describe('Modül sırası', () => {
   test('varsayılan sıra kayıt sırasıdır', async ({ request }) => {
     const { token } = await registerUser(request, 'order');
