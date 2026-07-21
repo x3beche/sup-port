@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       api_url:
-        description: 'APK içine gömülecek API adresi (telefon bu adrese ulaşabilmeli)'
-        required: true
-        default: 'http://10.40.30.213:4000'
+        description: 'API adresini geçersiz kıl (boşsa build-config.yaml kullanılır)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -24,8 +24,8 @@ jobs:
     timeout-minutes: 40
 
     env:
-      # Standalone APK'da Metro host'u yok; adres derleme anında gömülüyor.
-      EXPO_PUBLIC_API_URL: ${{ github.event.inputs.api_url || 'http://10.40.30.213:4000' }}
+      # Boşsa app.config.js build-config.yaml'daki aktif ortamı kullanır.
+      EXPO_PUBLIC_API_URL: ${{ github.event.inputs.api_url }}
 
     steps:
       - uses: actions/checkout@v4

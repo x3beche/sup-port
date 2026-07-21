@@ -8,24 +8,26 @@ const API_PORT = 4000;
  * reuse the host Metro is already served from, which is the dev machine's LAN IP.
  */
 function resolveBaseUrl(): string {
-  // Baked in at build time for standalone APKs, where there is no Metro host to
-  // discover. Set via EXPO_PUBLIC_API_URL before `expo prebuild`.
-  const fromEnv = process.env.EXPO_PUBLIC_API_URL;
-  if (fromEnv) return fromEnv.replace(/\/$/, '');
+  // Explicit override always wins (one-off builds / CI).
+  const override = process.env.EXPO_PUBLIC_API_URL;
+  if (override) return override.replace(/\/$/, '');
 
+  // Web and Expo Go can discover the host they were served from, which keeps
+  // dev and tests hitting the same machine regardless of what's configured.
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return `${window.location.protocol}//${window.location.hostname}:${API_PORT}`;
   }
-
-  // In Expo Go / dev the phone reaches the dev machine over Metro's LAN host.
   const hostUri = Constants.expoConfig?.hostUri ?? Constants.expoGoConfig?.debuggerHost;
   const host = hostUri?.split(':')[0];
   if (host) return `http://${host}:${API_PORT}`;
 
-  // A release APK with no baked URL would fall back to localhost — the phone
-  // itself — and silently fail every request. Surface that instead.
+  // A standalone APK has no host to discover, so it uses the address baked from
+  // build-config.yaml (app.config.js -> extra.apiUrl).
+  const configured = Constants.expoConfig?.extra?.apiUrl as string | undefined;
+  if (configured) return configured.replace(/\/$/, '');
+
   if (__DEV__ === false) {
-    console.warn('EXPO_PUBLIC_API_URL tanımlı değil; API adresi çözümlenemiyor.');
+    console.warn('build-config.yaml içinde api adresi yok; bağlantı çözümlenemiyor.');
   }
   return `http://localhost:${API_PORT}`;
 }

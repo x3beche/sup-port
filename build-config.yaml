@@ -1,0 +1,36 @@
+# sup-port — uygulama derleme yapılandırması
+#
+# Buradaki değerler hem `expo start` (web/geliştirme) hem de APK derlemesi
+# tarafından app.config.js üzerinden okunur. Bir değeri değiştirip yeniden
+# derlemen yeterli:  bash scripts/build-apk.sh
+#
+# NOT: Bu dosya gizli bilgi İÇERMEZ ve depoya girer. Backend'in MongoDB/JWT
+# gibi çalışma-zamanı sırları ayrı ve gitignore'lu olan config.yaml'dadır.
+
+app:
+  name: sup-port
+  slug: sup-port
+  android_package: app.support.tracker
+  version: "1.0.0"
+  # Her yayında artır; Play Store aynı versionCode'u ikinci kez kabul etmez.
+  version_code: 1
+
+# Uygulamanın bağlanacağı backend. Aktif ortam `environment` ile seçilir;
+# APK bu ortamın adresiyle derlenir.
+environment: lan   # seçenekler: lan | localhost | production
+api:
+  # Telefonun geliştirme makinesine aynı Wi-Fi üzerinden ulaştığı adres.
+  lan: http://10.40.30.213:4000
+  # Yalnızca web/emülatörde işe yarar (telefonda "localhost" telefonun kendisidir).
+  localhost: http://localhost:4000
+  # Backend herkese açık bir sunucuya deploy edilince burayı doldur.
+  production: https://api.example.com
+
+android:
+  # Backend https değil http olduğu sürece gerekli; aksi halde Android 9+
+  # temiz-metin (cleartext) istekleri engeller ve uygulama backend'e ulaşamaz.
+  uses_cleartext_traffic: true
+
+theme:
+  # Koyu tema; açılış ve adaptif ikon zemini.
+  background: "#000000"
