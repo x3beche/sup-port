@@ -10,14 +10,24 @@ Arayüz Samsung Health'in koyu temasından esinlenir: saf siyah zemin, yuvarlak 
 kartlar, tepede günlük puan halkası, altında iOS uygulama seçme ekranı tarzında
 modül ızgarası.
 
+## Ekran görüntüleri
+
+<p align="center">
+  <img src="docs/screenshots/home.png" width="200" alt="Ana ekran — günlük puan, haftalık grafik, modül ızgarası" />
+  <img src="docs/screenshots/spor.png" width="200" alt="Spor — BMI, WHO haftalık hedef ve yapay zekâ önerisi" />
+  <img src="docs/screenshots/brush.png" width="200" alt="Diş fırçalama — yuvalar, seri ve 2 dk sayaç" />
+  <img src="docs/screenshots/library.png" width="200" alt="Egzersiz kütüphanesi — filtre ve detay" />
+</p>
+
 ## Modüller
 
 | Modül | Varsayılan hedef | Ne yapar |
 | --- | --- | --- |
 | Su | 8 bardak | Günlük su takibi |
 | Beslenme | 3 öğün | Öğün kaydı |
-| Diş Fırçalama | 2 kez | Sabah ve akşam rutini |
+| Diş Fırçalama | 2 kez | Sabah/akşam yuvaları, seri ve 2 dk rehberli sayaç |
 | İngilizce | 20 dk | Kelime ve tekrar çalışması |
+| Egzersiz | 30 dk | Egzersiz kütüphanesi, BMI/vücut takibi, MET kalori, WHO haftalık hedef, yapay zekâ önerisi |
 | Adım | 8000 adım | Günlük hareket |
 | Uyku | 8 saat | Uyku süresi |
 | Okuma | 30 dk | Kitap okuma süresi |
