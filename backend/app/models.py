@@ -35,8 +35,19 @@ class User(BaseModel):
 
 class AuthResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     user: User
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str = Field(min_length=1)
+
+
+class LogoutRequest(BaseModel):
+    # Optional: when present, only this device's refresh token is revoked, so a
+    # sign-out here doesn't end the user's sessions on other devices.
+    refresh_token: str | None = None
 
 
 class EntryValue(BaseModel):

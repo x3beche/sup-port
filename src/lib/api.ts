@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { canRefresh, notifySessionInvalid, refreshAccessToken } from './authBridge';
 
 const API_PORT = 4000;
 
@@ -106,6 +107,14 @@ function messageFrom(payload: unknown, fallback: string): string {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return requestOnce<T>(path, options, true);
+}
+
+async function requestOnce<T>(
+  path: string,
+  options: RequestOptions,
+  allowRefresh: boolean,
+): Promise<T> {
   const { method = 'GET', body, token, signal, keepalive } = options;
 
   let response: Response;
@@ -123,6 +132,18 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   } catch (err) {
     if ((err as Error)?.name === 'AbortError') throw err;
     throw new ApiError('Sunucuya ulaşılamadı, bağlantını kontrol et', 0);
+  }
+
+  // Access token expired: transparently refresh once and retry. Only for
+  // token-bearing requests, and never a second time (allowRefresh=false on the
+  // retry) so a still-401 response can't loop.
+  if (response.status === 401 && token && allowRefresh && canRefresh()) {
+    const fresh = await refreshAccessToken();
+    if (fresh) {
+      return requestOnce<T>(path, { ...options, token: fresh }, false);
+    }
+    // Refresh failed → the session is genuinely over; let the app sign out.
+    notifySessionInvalid();
   }
 
   if (response.status === 204) return undefined as T;

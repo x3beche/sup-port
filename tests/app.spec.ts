@@ -394,8 +394,9 @@ test.describe('Uygulama mağazası', () => {
     await registerThroughUi(page, 'store-empty');
     // Faster than clicking eight times: drive the API, then reload the grid.
     await page.evaluate(async () => {
-      const raw = localStorage.getItem('support:session');
-      const token = JSON.parse(raw!).token;
+      // Tokens now live in secure storage (web falls back to this key), not in
+      // the session profile blob.
+      const token = localStorage.getItem('support.secure.accessToken');
       const store = await (await fetch('http://localhost:4000/api/store', {
         headers: { Authorization: `Bearer ${token}` },
       })).json();

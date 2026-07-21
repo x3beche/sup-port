@@ -32,19 +32,61 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def create_access_token(user_id: str) -> str:
-    now = datetime.now(timezone.utc)
-    payload = {
-        "sub": user_id,
-        "jti": uuid.uuid4().hex,
-        "iat": now,
-        "exp": now + timedelta(days=settings.access_token_days),
-    }
+# Precomputed hash of an unguessable value. Verifying an incoming password against
+# it spends the same bcrypt time as a real check, so an unknown-email login costs
+# as long as a wrong-password one and latency can't reveal which emails exist.
+_DUMMY_HASH = bcrypt.hashpw(b"timing-equalizer-not-a-real-password", bcrypt.gensalt())
+
+
+def dummy_verify(password: str) -> None:
+    """Runs a throwaway bcrypt compare to keep login timing constant."""
+    try:
+        bcrypt.checkpw(password.encode("utf-8"), _DUMMY_HASH)
+    except ValueError:
+        pass
+
+
+# Short-lived access tokens plus long-lived, rotating refresh tokens: a stolen
+# access token is only useful for minutes, and the refresh token is single-use.
+ACCESS_TYPE = "access"
+REFRESH_TYPE = "refresh"
+
+
+def _encode(payload: dict) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def decode_access_token(token: str) -> TokenClaims | None:
-    """Returns the token's claims, or None when it is invalid or expired."""
+def create_access_token(user_id: str) -> str:
+    now = datetime.now(timezone.utc)
+    return _encode(
+        {
+            "sub": user_id,
+            "jti": uuid.uuid4().hex,
+            "typ": ACCESS_TYPE,
+            "iat": now,
+            "exp": now + timedelta(minutes=settings.access_token_minutes),
+        }
+    )
+
+
+def create_refresh_token(user_id: str) -> tuple[str, str, datetime]:
+    """Returns (token, jti, expires_at); the caller persists jti for rotation."""
+    now = datetime.now(timezone.utc)
+    jti = uuid.uuid4().hex
+    expires_at = now + timedelta(days=settings.refresh_token_days)
+    token = _encode(
+        {
+            "sub": user_id,
+            "jti": jti,
+            "typ": REFRESH_TYPE,
+            "iat": now,
+            "exp": expires_at,
+        }
+    )
+    return token, jti, expires_at
+
+
+def _decode(token: str, expected_type: str) -> TokenClaims | None:
     try:
         payload = jwt.decode(
             token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
@@ -53,11 +95,18 @@ def decode_access_token(token: str) -> TokenClaims | None:
         return None
 
     sub, jti, exp = payload.get("sub"), payload.get("jti"), payload.get("exp")
+    # Access tokens issued before the refresh split carried no "typ"; treat a
+    # missing type as access so those sessions keep working until they expire.
+    typ = payload.get("typ", ACCESS_TYPE)
     if not isinstance(sub, str) or not isinstance(exp, (int, float)):
         return None
     # Tokens issued before revocation existed have no jti and cannot be revoked
     # individually, so they are refused outright rather than trusted forever.
     if not isinstance(jti, str):
+        return None
+    # A refresh token must never be accepted where an access token is expected
+    # (and vice versa), even though both are signed with the same key.
+    if typ != expected_type:
         return None
 
     return TokenClaims(
@@ -65,3 +114,13 @@ def decode_access_token(token: str) -> TokenClaims | None:
         jti=jti,
         expires_at=datetime.fromtimestamp(exp, tz=timezone.utc),
     )
+
+
+def decode_access_token(token: str) -> TokenClaims | None:
+    """Returns the access token's claims, or None when invalid/expired/wrong-type."""
+    return _decode(token, ACCESS_TYPE)
+
+
+def decode_refresh_token(token: str) -> TokenClaims | None:
+    """Returns the refresh token's claims, or None when invalid/expired/wrong-type."""
+    return _decode(token, REFRESH_TYPE)

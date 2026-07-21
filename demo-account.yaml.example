@@ -1,0 +1,12 @@
+# Play Store incelemesi için demo giriş bilgisi.
+# Bu dosyayı kopyalayıp doldur:  cp demo-account.yaml.example demo-account.yaml
+#
+# ÖNEMLİ: demo-account.yaml gitignore'ludur — gerçek parolayı ASLA commit etme.
+# Play'e demo bilgisini repo üzerinden DEĞİL, Play Console > "App access"
+# (Uygulama erişimi) bölümünden ver.
+
+demo_account:
+  email: demo@example.com
+  password: <demo-parolasi>
+  notes: >
+    İnceleyene uygulamanın nasıl kullanılacağını anlatan kısa not.

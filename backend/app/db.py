@@ -44,6 +44,11 @@ async def _ensure_indexes(db: AsyncDatabase) -> None:
     # Revoked tokens are only useful until they expire on their own, so Mongo
     # drops each entry at its own expires_at instead of the list growing forever.
     await db["revoked_tokens"].create_index("expires_at", expireAfterSeconds=0)
+    # Refresh tokens self-expire the same way; the TTL keeps the rotation ledger
+    # from accumulating dead single-use entries.
+    await db["refresh_tokens"].create_index("expires_at", expireAfterSeconds=0)
+    # Reuse-detection revokes an entire user's chain, so that lookup needs an index.
+    await db["refresh_tokens"].create_index([("user_id", ASCENDING)])
 
 
 def get_db() -> AsyncDatabase:

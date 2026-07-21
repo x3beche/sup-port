@@ -80,6 +80,9 @@ module.exports = () => {
           },
         },
       ],
+      // Oturum token'ları AsyncStorage yerine cihaz keystore/keychain'inde
+      // (şifreli) saklansın diye — bkz. src/lib/secureStore.ts.
+      'expo-secure-store',
       // Debug key yerine gerçek release keystore ile imzalama.
       './plugins/withReleaseSigning',
     ],
