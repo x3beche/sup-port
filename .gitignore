@@ -39,9 +39,6 @@ config.yaml
 # demo giriş bilgisi Play Console > "App access" altına yazılır.
 demo-account.yaml
 
-# yeni modül fikirleri araştırması — yerel tut, repoya girmesin
-docs/new_module_ideas/
-
 # tests
 tests/.artifacts/
 tests/.report/
