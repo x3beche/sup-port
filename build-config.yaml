@@ -15,8 +15,8 @@ app:
   android_package: app.support.tracker
   # Her Play yüklemesinde version_code MUTLAKA artmalı; Play aynı kodu iki kez
   # kabul etmez. version (adı) kullanıcıya görünür, semver ilerlet.
-  version: "1.0.0"
-  version_code: 1
+  version: "1.0.1"
+  version_code: 2
 
 # Play 2025 benchmark'ları: target >= 34 zorunlu, min 24 önerilir.
 # Expo SDK 57 compileSdk 36 ile gelir; target'i de 36'da tutmak Play'i geçer.
