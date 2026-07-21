@@ -59,15 +59,18 @@ sup-port açık kaynaktır.
 ## İletişim
 - E-posta: (Play Console'da geçerli bir iletişim e-postası zorunlu)
 - Web sitesi: https://github.com/x3beche/sup-port
-- Gizlilik politikası URL'si: (store/privacy-policy-tr.md içeriğini bir yere
-  yayınla — ör. GitHub Pages — ve URL'sini buraya gir)
+- Yasal metinler (herkese açık bir URL'de yayınla, ör. GitHub Pages veya repo
+  blob linki; Play Console'a URL olarak gir):
+  - Gizlilik Politikası: `store/privacy-policy-tr.md`
+  - Kullanım Koşulları: `store/terms-of-service-tr.md`
+  - KVKK Aydınlatma Metni: `store/kvkk-aydinlatma-tr.md`
 
 ## Gerekli görseller (Play Console zorunlu alanları)
 | Öğe | Boyut / biçim | Durum |
 | --- | --- | --- |
-| Uygulama simgesi | 512×512 px, 32-bit PNG | assets/icon.png'den 512'ye ölçekle |
-| Öne çıkan grafik (feature graphic) | 1024×500 px, PNG/JPG | oluşturulmalı (store/feature-graphic önerisi) |
-| Telefon ekran görüntüsü | en az 2, 16:9 veya 9:16; 320–3840 px | scripts/screenshots ile üret |
+| Uygulama simgesi | 512×512 px, 32-bit PNG | ✅ `store/graphics/icon-512.png` |
+| Öne çıkan grafik (feature graphic) | 1024×500 px, PNG | ✅ `store/graphics/feature-graphic-1024x500.png` |
+| Telefon ekran görüntüsü | en az 2 (1080×1920) | ✅ `store/graphics/screenshot-1..3-*.png` |
 | (İsteğe bağlı) 7"/10" tablet görselleri | — | gerekmez |
 
 Ekran görüntüsü sırası (rehber önerisi: sonuç → akış → güven):

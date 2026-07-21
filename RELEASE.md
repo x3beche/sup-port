@@ -78,11 +78,15 @@ olarak `release.minify: false` yap.
 2. **Uygulama oluştur:** ad, dil, uygulama/oyun, ücretsiz/ücretli.
 3. **App signing:** Play App Signing'i etkinleştir; ilk AAB'yi yüklerken
    `release/sup-port.keystore` upload key olur.
-4. **Ana mağaza girişi:** `store/listing-tr.md` içeriğini gir (ad, kısa/tam
-   açıklama). Görseller: 512×512 ikon, 1024×500 öne çıkan grafik, en az 2
-   ekran görüntüsü.
-5. **Gizlilik politikası:** `store/privacy-policy-tr.md`'yi herkese açık bir
-   URL'de yayınla, URL'yi gir.
+4. **Ana mağaza girişi:** `store/listing-tr.md` içeriğini gir. Görseller HAZIR:
+   `store/graphics/` altında 512 ikon, 1024×500 öne çıkan grafik ve üç
+   1080×1920 ekran görüntüsü.
+5. **Yasal metinler:** `store/privacy-policy-tr.md`, `store/terms-of-service-tr.md`
+   ve `store/kvkk-aydinlatma-tr.md` HAZIR. Bunları herkese açık bir URL'de
+   yayınla (GitHub Pages veya repo blob linki) ve URL'leri Play Console'un
+   gizlilik politikası + uygulama içeriği bölümlerine gir.
+   **Demo hesap:** giriş gerektiği için "App access" bölümüne `demo-account.yaml`
+   içindeki bilgileri gir.
 6. **Veri güvenliği formu:** topladığın veriler = e-posta, isim, uygulama
    içi alışkanlık verisi; üçüncü tarafla paylaşım yok; aktarım şifreli.
    Politikayla birebir tutarlı doldur.

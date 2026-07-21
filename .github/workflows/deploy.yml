@@ -17,19 +17,15 @@ jobs:
   redeploy:
     runs-on: ubuntu-latest
     env:
-      # Ortama özel değerler repo variable'larından (Settings > Secrets and
-      # variables > Actions > Variables). Bir kez ayarla:
-      #   PORTAINER_HOST      örn. https://portainer.ornek.dev
-      #   PORTAINER_STACK_ID  Portainer'daki stack numarası
-      #   PORTAINER_ENDPOINT_ID  endpoint (environment) numarası
-      #   VERSION_URL         backend'in herkese açık /version adresi
-      #                       (proxy üzerinden, örn. https://api.ornek.dev/version)
-      #   REPO_USERNAME       GitHub kullanıcı adın (varsayılan x3beche)
-      PORTAINER_HOST: ${{ vars.PORTAINER_HOST }}
+      # Paylaşılan Portainer (kiwio ile aynı sunucu) — sabit.
+      PORTAINER_HOST: https://portainer.medipol.dev
+      ENDPOINT_ID: 3
+      VERSION_URL: https://support.medipol.dev/version
+      REPO_USERNAME: x3beche
+      # Yalnızca bunu ayarla: sup-port stack'ini Portainer'da oluşturunca
+      # numarasını Settings > Secrets and variables > Actions > Variables
+      # altına PORTAINER_STACK_ID olarak gir.
       STACK_ID: ${{ vars.PORTAINER_STACK_ID }}
-      ENDPOINT_ID: ${{ vars.PORTAINER_ENDPOINT_ID }}
-      VERSION_URL: ${{ vars.VERSION_URL }}
-      REPO_USERNAME: ${{ vars.REPO_USERNAME || 'x3beche' }}
     steps:
       - name: Trigger Portainer pull & redeploy with GIT_SHA
         env:

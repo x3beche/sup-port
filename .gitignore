@@ -35,6 +35,9 @@ yarn-error.*
 
 # secrets
 config.yaml
+# Demo hesap gerçek bir parola içerir; repoya girmemeli. Play incelemesi için
+# demo giriş bilgisi Play Console > "App access" altına yazılır.
+demo-account.yaml
 
 # tests
 tests/.artifacts/
@@ -58,3 +61,4 @@ release/*.keystore
 release/*.jks
 .env
 cyber-security/
+demo-account.yaml
