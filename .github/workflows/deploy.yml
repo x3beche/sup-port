@@ -17,15 +17,12 @@ jobs:
   redeploy:
     runs-on: ubuntu-latest
     env:
-      # Paylaşılan Portainer (kiwio ile aynı sunucu) — sabit.
+      # Portainer (kiwio ile aynı sunucu) ve support-app stack'i — sabit.
       PORTAINER_HOST: https://portainer.medipol.dev
       ENDPOINT_ID: 3
+      STACK_ID: 27
       VERSION_URL: https://support.medipol.dev/version
       REPO_USERNAME: x3beche
-      # Yalnızca bunu ayarla: sup-port stack'ini Portainer'da oluşturunca
-      # numarasını Settings > Secrets and variables > Actions > Variables
-      # altına PORTAINER_STACK_ID olarak gir.
-      STACK_ID: ${{ vars.PORTAINER_STACK_ID }}
     steps:
       - name: Trigger Portainer pull & redeploy with GIT_SHA
         env:
