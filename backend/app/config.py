@@ -74,6 +74,23 @@ class Settings:
             os.getenv("TRUST_FORWARDED_FOR"), bool(data.get("trust_forwarded_for", False))
         )
 
+        # LLM (OpenRouter, OpenAI uyumlu) — öneri/özet üretimi için. Opsiyonel:
+        # yoksa LLM özellikleri devre dışı kalır, uygulama yine açılır. Model
+        # ucuz tutulur (girdi+çıktı 1M'de < 0.50 USD).
+        self.openrouter_api_key: str | None = (
+            os.getenv("OPENROUTER_API_KEY") or data.get("openrouter_api_key")
+        )
+        self.openrouter_model: str = (
+            os.getenv("OPENROUTER_MODEL")
+            or data.get("openrouter_model")
+            or "google/gemini-2.0-flash-lite-001"
+        )
+        self.openrouter_base_url: str = (
+            os.getenv("OPENROUTER_BASE_URL")
+            or data.get("openrouter_base_url")
+            or "https://openrouter.ai/api/v1"
+        )
+
         # Rate limiting is on by default (production). Test/CI turns it off so a
         # suite that registers many users from one IP isn't throttled.
         self.rate_limit_enabled: bool = _env_bool(
