@@ -22,6 +22,18 @@ test.describe('S23 çerçevesi', () => {
     await expect(frame.getByTestId('submit-auth')).toBeVisible();
   });
 
+  test('durum çubuğu ve 3-tuşlu gezinme çubuğu görünür', async ({ page }) => {
+    await page.goto('/s23.html');
+    // Simüle edilmiş Android sistem çubukları — uygulama bunlara sızmasın diye
+    // içeriğini aynı yükseklikte insetler (src/lib/insets.ts).
+    await expect(page.locator('.statusbar')).toBeVisible();
+    await expect(page.locator('.navbar')).toBeVisible();
+    // 3 tuş: geri / ana ekran / son uygulamalar.
+    await expect(page.locator('.navbar .navbtn')).toHaveCount(3);
+    // Geri tuşu tıklanabilir (uygulamaya postMessage gönderir).
+    await expect(page.locator('#navBack')).toBeVisible();
+  });
+
   test('iframe tam olarak S23 mantıksal çözünürlüğünde', async ({ page }) => {
     await page.goto('/s23.html');
 

@@ -35,7 +35,8 @@ test.describe('Oturum', () => {
 
   test('yanlış parola hata gösterir, panele geçmez', async ({ page }) => {
     const email = await registerThroughUi(page, 'wrongpass');
-    await page.getByTestId('logout').click();
+    await page.getByTestId('menu-open').click();
+    await page.getByTestId('menu-logout').click();
     await expect(page.getByTestId('submit-auth')).toBeVisible();
 
     await page.getByTestId('input-email').fill(email);
@@ -55,7 +56,8 @@ test.describe('Oturum', () => {
 
   test('çıkış yapınca oturum silinir ve yenilemede geri gelmez', async ({ page }) => {
     await registerThroughUi(page, 'logout');
-    await page.getByTestId('logout').click();
+    await page.getByTestId('menu-open').click();
+    await page.getByTestId('menu-logout').click();
     await expect(page.getByTestId('submit-auth')).toBeVisible();
 
     await page.reload();

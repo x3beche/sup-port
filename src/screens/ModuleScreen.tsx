@@ -6,6 +6,7 @@ import { StepPad } from '../components/StepPad';
 import { TargetEditor } from '../components/TargetEditor';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest, todayIso } from '../lib/api';
+import { useBackHandler } from '../lib/backHandler';
 import { useCachedQuery } from '../lib/useCachedQuery';
 import { onColor, tabularNums, theme } from '../theme';
 import type { HistoryPoint, ModuleProgress } from '../types';
@@ -179,6 +180,12 @@ export function ModuleScreen({
     await flushNow();
     onBack();
   }, [flushNow, onBack]);
+
+  // Android donanım/gesture geri tuşu da bekleyen yazımı gönderip geri döner.
+  useBackHandler(() => {
+    void handleBack();
+    return true;
+  });
 
   // A reload or tab switch inside the window would lose it just the same.
   useEffect(() => {

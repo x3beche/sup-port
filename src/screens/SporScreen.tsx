@@ -7,6 +7,7 @@ import { Icon } from '../components/Icon';
 import { ScoreRing } from '../components/ScoreRing';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest, todayIso } from '../lib/api';
+import { useBackHandler } from '../lib/backHandler';
 import { useCachedQuery } from '../lib/useCachedQuery';
 import { onColor, tabularNums, theme } from '../theme';
 import type {
@@ -68,7 +69,7 @@ export function SporScreen({
     token ? 'spor-meta' : null,
     (signal) => apiRequest<SporMeta>('/api/spor/meta', { token, signal }),
   );
-  const { data: rec, setData: setRec } = useCachedQuery<SporRecommendation>(
+  const { data: rec, setData: setRec, refresh: refreshRec } = useCachedQuery<SporRecommendation>(
     token ? `spor-rec:${today}` : null,
     (signal) => apiRequest<SporRecommendation>('/api/spor/recommendation?llm=false', { token, signal }),
   );
@@ -115,7 +116,20 @@ export function SporScreen({
   const refreshAll = useCallback(() => {
     void refreshSummary();
     void refreshWeekly();
-  }, [refreshSummary, refreshWeekly]);
+    // Öneri BMI'ye bağlı; yeni ölçüm eklenince güncel kategoriye göre yenilensin.
+    void refreshRec();
+  }, [refreshRec, refreshSummary, refreshWeekly]);
+
+  // Geri tuşu önce açık katmanı kapatır (kütüphane kendi iç geri işleyicisini
+  // kullanır), sonra ekrandan çıkar.
+  useBackHandler(() => {
+    if (overlay) {
+      setOverlay(null);
+      return true;
+    }
+    onBack();
+    return true;
+  });
 
   const current = summary?.current;
   const minutesRatio = weekly ? Math.round(weekly.minutes_ratio * 100) : 0;

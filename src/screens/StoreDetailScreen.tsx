@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { Icon, type IconName } from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/api';
+import { useBackHandler } from '../lib/backHandler';
 import { onColor, theme } from '../theme';
 import type { StoreApp } from '../types';
 
@@ -15,6 +16,10 @@ type Props = {
 
 export function StoreDetailScreen({ app: initial, onBack, onChanged }: Props) {
   const { token } = useAuth();
+  useBackHandler(() => {
+    onBack();
+    return true;
+  });
   const [app, setApp] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

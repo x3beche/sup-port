@@ -5,6 +5,7 @@ import { Confetti } from '../components/Confetti';
 import { Icon, type IconName } from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest, todayIso } from '../lib/api';
+import { useBackHandler } from '../lib/backHandler';
 import { haptics } from '../lib/haptics';
 import { useCachedQuery } from '../lib/useCachedQuery';
 import { onColor, tabularNums, theme } from '../theme';
@@ -126,6 +127,16 @@ export function BrushScreen({
     }
     if (slot) setSlot(slot, true);
   }, [setSlot, status]);
+
+  // Geri tuşu önce açık sayacı kapatır, sonra ekrandan çıkar.
+  useBackHandler(() => {
+    if (timerOpen) {
+      setTimerOpen(false);
+      return true;
+    }
+    onBack();
+    return true;
+  });
 
   const streak = status?.streak ?? 0;
   const best = status?.best_streak ?? 0;

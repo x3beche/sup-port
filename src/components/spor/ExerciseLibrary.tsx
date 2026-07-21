@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { apiRequest } from '../../lib/api';
+import { useBackHandler } from '../../lib/backHandler';
 import { useCachedQuery } from '../../lib/useCachedQuery';
 import { onColor, theme } from '../../theme';
 import type { Exercise, ExerciseList, WorkoutItem } from '../../types';
@@ -73,6 +74,16 @@ export function ExerciseLibrary({
       setSaving(false);
     }
   }, [cart, onClose, onLog, saving]);
+
+  // Geri tuşu önce açık egzersiz detayını, sonra kütüphaneyi kapatır.
+  useBackHandler(() => {
+    if (detail) {
+      setDetail(null);
+      return true;
+    }
+    onClose();
+    return true;
+  });
 
   const categories = data?.categories ?? [];
 

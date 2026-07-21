@@ -19,7 +19,10 @@ export type IconName =
   | 'chart'
   | 'chevron-left'
   | 'check'
-  | 'plus';
+  | 'plus'
+  | 'menu'
+  | 'store'
+  | 'logout';
 
 type Props = {
   name: IconName;
@@ -156,6 +159,27 @@ function renderPaths(name: IconName, stroke: object, color: string) {
 
     case 'plus':
       return <Path d="M12 5 V19 M5 12 H19" {...stroke} />;
+
+    case 'menu':
+      return <Path d="M4 7 H20 M4 12 H20 M4 17 H20" {...stroke} />;
+
+    case 'store':
+      // Storefront: awning + walls + doorway (marketplace).
+      return (
+        <>
+          <Path d="M4 9.5 L5.4 5 H18.6 L20 9.5 Z" {...stroke} />
+          <Path d="M5 9.5 V19.5 H19 V9.5" {...stroke} />
+          <Path d="M10 19.5 V14 H14 V19.5" {...stroke} />
+        </>
+      );
+
+    case 'logout':
+      return (
+        <>
+          <Path d="M9.5 5 H6 A1 1 0 0 0 5 6 V18 A1 1 0 0 0 6 19 H9.5" {...stroke} />
+          <Path d="M13 12 H20.5 M17.5 8.5 L21 12 L17.5 15.5" {...stroke} />
+        </>
+      );
 
     default:
       return <Circle cx="12" cy="12" r="8" stroke={color} strokeWidth={1.7} fill="none" />;

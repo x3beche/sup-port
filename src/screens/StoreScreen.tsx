@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { Icon, type IconName } from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/api';
+import { useBackHandler } from '../lib/backHandler';
 import { useCachedQuery } from '../lib/useCachedQuery';
 import { theme } from '../theme';
 import type { StoreApp } from '../types';
@@ -30,6 +31,10 @@ export function StoreScreen({
   onOpenApp: (app: StoreApp) => void;
 }) {
   const { token } = useAuth();
+  useBackHandler(() => {
+    onBack();
+    return true;
+  });
 
   const fetcher = useCallback(
     (signal: AbortSignal) => apiRequest<StoreApp[]>('/api/store', { token, signal }),

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { DraggableGrid } from '../components/DraggableGrid';
 import { Icon } from '../components/Icon';
+import { useBackHandler } from '../lib/backHandler';
 import { SummaryCard } from '../components/SummaryCard';
 import { StepPad } from '../components/StepPad';
 import { WeeklyChart } from '../components/WeeklyChart';
@@ -61,6 +62,13 @@ export function HomeScreen({
   );
 
   const [quickAdd, setQuickAdd] = useState<ModuleProgress | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Geri tuşu açık menüyü kapatsın (uygulamadan çıkmadan önce).
+  useBackHandler(() => {
+    setMenuOpen(false);
+    return true;
+  }, menuOpen);
 
   // Size preference is a per-device layout choice, so it stays local.
   const [compactSummary, setCompactSummary] = useState(false);
@@ -152,6 +160,7 @@ export function HomeScreen({
   const modules = data?.modules ?? [];
 
   return (
+    <View style={styles.flex}>
     <ScrollView
       style={styles.flex}
       contentContainerStyle={styles.content}
@@ -168,8 +177,15 @@ export function HomeScreen({
           </Text>
           <Text style={styles.date}>{prettyDate}</Text>
         </View>
-        <Pressable onPress={logout} testID="logout" style={styles.logout} accessibilityRole="button">
-          <Text style={styles.logoutText}>Çıkış</Text>
+        <Pressable
+          onPress={() => setMenuOpen(true)}
+          testID="menu-open"
+          accessibilityRole="button"
+          accessibilityLabel="Menü"
+          hitSlop={10}
+          style={({ pressed }) => [styles.iconButton, pressed && styles.storePressed]}
+        >
+          <Icon name="menu" size={20} strokeWidth={2} color={theme.color.text} />
         </Pressable>
       </View>
 
@@ -198,9 +214,10 @@ export function HomeScreen({
           testID="open-store"
           accessibilityRole="button"
           accessibilityLabel="Uygulama mağazasını aç"
+          hitSlop={8}
           style={({ pressed }) => [styles.storeButton, pressed && styles.storePressed]}
         >
-          <Icon name="plus" size={16} strokeWidth={2.2} color={theme.color.accent} />
+          <Icon name="store" size={15} strokeWidth={1.9} color={theme.color.accent} />
           <Text style={styles.storeText}>Mağaza</Text>
         </Pressable>
       </View>
@@ -245,6 +262,37 @@ export function HomeScreen({
         </View>
       ) : null}
     </ScrollView>
+
+    {menuOpen ? (
+      <Pressable
+        style={styles.menuBackdrop}
+        testID="menu-backdrop"
+        onPress={() => setMenuOpen(false)}
+        accessibilityRole="button"
+        accessibilityLabel="Menüyü kapat"
+      >
+        <View style={styles.menuCard}>
+          <View style={styles.menuHeader}>
+            <Text style={styles.menuName} numberOfLines={1}>{user?.name ?? ''}</Text>
+            {user?.email ? <Text style={styles.menuEmail} numberOfLines={1}>{user.email}</Text> : null}
+          </View>
+          {/* Yeni ayarlar buraya eklenecek (tema, bildirim, hesap...) */}
+          <Pressable
+            onPress={() => {
+              setMenuOpen(false);
+              logout();
+            }}
+            testID="menu-logout"
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+          >
+            <Icon name="logout" size={18} strokeWidth={1.9} color={theme.color.danger} />
+            <Text style={styles.menuItemText}>Çıkış yap</Text>
+          </Pressable>
+        </View>
+      </Pressable>
+    ) : null}
+    </View>
   );
 }
 
@@ -278,20 +326,54 @@ const styles = StyleSheet.create({
     fontSize: theme.font.label,
     color: theme.color.textMuted,
   },
-  logout: {
-    minHeight: 44,
+  iconButton: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: theme.space(4),
     borderRadius: theme.radius.pill,
     backgroundColor: theme.color.card,
     borderWidth: 1,
     borderColor: theme.color.border,
   },
-  logoutText: {
-    fontSize: theme.font.caption,
-    fontWeight: '700',
-    color: theme.color.textMuted,
+  menuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'flex-end',
+    paddingTop: theme.space(4),
+    paddingHorizontal: theme.space(5),
+    zIndex: 50,
   },
+  menuCard: {
+    minWidth: 200,
+    maxWidth: 280,
+    backgroundColor: theme.color.cardRaised,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.color.border,
+    overflow: 'hidden',
+  },
+  menuHeader: {
+    paddingHorizontal: theme.space(4),
+    paddingVertical: theme.space(3),
+    borderBottomWidth: 1,
+    borderBottomColor: theme.color.border,
+  },
+  menuName: { fontSize: theme.font.body, fontWeight: '700', color: theme.color.text },
+  menuEmail: { marginTop: 2, fontSize: theme.font.caption, color: theme.color.textMuted },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space(3),
+    paddingHorizontal: theme.space(4),
+    minHeight: 48,
+  },
+  menuItemPressed: { backgroundColor: theme.color.card },
+  menuItemText: { fontSize: theme.font.body, fontWeight: '600', color: theme.color.text },
   banner: {
     backgroundColor: theme.color.warnBg,
     borderRadius: theme.radius.sm,
@@ -319,14 +401,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space(1),
-    minHeight: 44,
+    height: 34,
     paddingHorizontal: theme.space(3),
     borderRadius: theme.radius.pill,
     backgroundColor: theme.color.accentSoft,
   },
   storePressed: { opacity: 0.7 },
   storeText: {
-    fontSize: theme.font.label,
+    fontSize: theme.font.caption,
     fontWeight: '700',
     color: theme.color.accent,
   },

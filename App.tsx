@@ -1,8 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, SafeAreaView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ScreenTransition } from './src/components/ScreenTransition';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { useInsets } from './src/lib/insets';
 import { hideScrollbars } from './src/lib/webChrome';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { BrushScreen } from './src/screens/BrushScreen';
@@ -116,6 +118,21 @@ function Shell() {
   );
 }
 
+/**
+ * İçeriği güvenli alanın içine yerleştirir: üstte durum çubuğu, altta gezinme
+ * çubuğu boşluğu. Android edge-to-edge'de bunlar olmadan içerik sistem
+ * çubuklarının altına sızıp "kullanılamaz alan" oluşturuyordu.
+ */
+function SafeAreaShell() {
+  const insets = useInsets();
+  return (
+    <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <Shell />
+      <StatusBar style="light" />
+    </View>
+  );
+}
+
 export default function App() {
   // Expo'nun ürettiği HTML lang="en" geliyor; ekran okuyucu Türkçe metni
   // İngilizce ses motoruyla okuyordu (WCAG 3.1.1).
@@ -127,12 +144,11 @@ export default function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <SafeAreaView style={styles.safeArea}>
-        <Shell />
-        <StatusBar style="light" />
-      </SafeAreaView>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <SafeAreaShell />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
