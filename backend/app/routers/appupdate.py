@@ -27,17 +27,19 @@ _cache: dict = {"data": None, "ts": 0.0}
 
 
 def _normalize(release: dict) -> dict:
-    apk = next(
-        (
-            a.get("browser_download_url")
-            for a in release.get("assets", [])
-            if str(a.get("name", "")).endswith(".apk")
-        ),
+    apk_asset = next(
+        (a for a in release.get("assets", []) if str(a.get("name", "")).endswith(".apk")),
         None,
     )
+    # GitHub asset digest formatı "sha256:abc..." — istemci indirdiği dosyanın
+    # bütünlüğünü bununla (HTTPS ile gelen güvenilir hash) doğrular.
+    digest = str((apk_asset or {}).get("digest") or "")
+    sha256 = digest.split(":", 1)[1] if digest.startswith("sha256:") else None
     return {
         "version": str(release.get("tag_name") or "").lstrip("v"),
-        "apk_url": apk,
+        "apk_url": (apk_asset or {}).get("browser_download_url"),
+        "size": (apk_asset or {}).get("size"),
+        "sha256": sha256,
         "release_url": release.get("html_url"),
         "notes": release.get("body") or "",
         "published_at": release.get("published_at"),

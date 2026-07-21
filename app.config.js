@@ -89,7 +89,7 @@ module.exports = () => {
       [
         'expo-camera',
         {
-          cameraPermission: 'sup-port, kitap barkodlarını taramak için kameranı kullanır.',
+          cameraPermission: 'sup-port; kitap/ürün barkodlarını taramak ve öğün fotoğrafından kalori tahmini için kameranı kullanır.',
           recordAudioAndroid: false,
           barcodeScannerEnabled: true,
         },

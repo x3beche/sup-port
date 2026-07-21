@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,6 +13,7 @@ import { DraggableGrid } from '../components/DraggableGrid';
 import { Icon } from '../components/Icon';
 import { useBackHandler } from '../lib/backHandler';
 import { checkForUpdate, type UpdateInfo } from '../lib/update';
+import { canInstallInApp, downloadUpdate, installApk, openInBrowser } from '../lib/updateInstall';
 import { UpdatePill } from '../components/UpdatePill';
 import { UpdateSuccess, restartApp } from '../components/UpdateSuccess';
 import { SummaryCard } from '../components/SummaryCard';
@@ -77,6 +79,7 @@ export function HomeScreen({
   const [updProgress, setUpdProgress] = useState(0);
   const [updSpeed, setUpdSpeed] = useState<string | null>(null);
   const updTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const downloadedUri = useRef<string | null>(null);
 
   // Yeni sürüm var mı? Kendi backend'imize sorar (bkz. lib/update.ts).
   useEffect(() => {
@@ -95,19 +98,12 @@ export function HomeScreen({
     setUpdSpeed(null);
   }, []);
 
-  const startUpdate = useCallback(() => {
-    if (!update || updStage !== 'idle') return;
-    setMenuOpen(false);
-    setUpdStage('downloading');
-    setUpdProgress(0);
-    // DEMO: kullanıcı ana ekranda kalır; sağ üstteki buton dolar. Bitince
-    // "güncellendi → yeniden başlat" ekranı animasyonla belirir. Gerçek sürümde
-    // bu simülasyonun yerini expo-file-system indirme + ilerleme callback'i alır
-    // (gerçek hız = bayt/zaman).
+  // DEMO/web simülasyonu: gerçek APK kurulamayan ortamlarda (web/iOS ya da
+  // apkUrl yoksa) akışı animasyonla gösterir.
+  const simulateUpdate = useCallback(() => {
     let value = 0;
     updTimer.current = setInterval(() => {
       value += 0.02 + Math.random() * 0.03;
-      // Makul, hafif dalgalanan indirme hızı (demo). TR ondalık virgül.
       setUpdSpeed(`${(2.2 + Math.random() * 2.3).toFixed(1).replace('.', ',')} MB/s`);
       if (value >= 1) {
         setUpdProgress(1);
@@ -120,7 +116,45 @@ export function HomeScreen({
         setUpdProgress(value);
       }
     }, 150);
-  }, [update, updStage]);
+  }, []);
+
+  const startUpdate = useCallback(async () => {
+    if (!update || updStage !== 'idle') return;
+    setMenuOpen(false);
+    setUpdStage('downloading');
+    setUpdProgress(0);
+    setUpdSpeed(null);
+
+    // Web/iOS ya da apkUrl yok → gerçek kurulum yapılamaz, akışı simüle et.
+    if (!canInstallInApp() || !update.apkUrl) {
+      simulateUpdate();
+      return;
+    }
+
+    // Android: GERÇEK indirme + doğrulama + kurulum.
+    try {
+      const fileUri = await downloadUpdate(update, ({ progress, speedText }) => {
+        setUpdProgress(progress);
+        if (speedText) setUpdSpeed(speedText);
+      });
+      downloadedUri.current = fileUri;
+      setUpdProgress(1);
+      setUpdSpeed(null);
+      setUpdStage('verifying');
+      // Doğrulama adımları görünsün (boyut/imza kontrolü hızlı).
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      setUpdStage('done');
+      await installApk(fileUri); // sistem yükleyicisini aç (imzayı Android doğrular)
+    } catch {
+      // Her hata → tarayıcıda APK'yı aç (kesin yedek), akışı sıfırla.
+      await openInBrowser(update);
+      if (updTimer.current) clearInterval(updTimer.current);
+      updTimer.current = null;
+      setUpdStage('idle');
+      setUpdProgress(0);
+      setUpdSpeed(null);
+    }
+  }, [simulateUpdate, update, updStage]);
 
   useEffect(
     () => () => {
@@ -513,7 +547,15 @@ export function HomeScreen({
     {updStage === 'done' && update ? (
       <UpdateSuccess
         version={update.version}
-        onRestart={restartApp}
+        onRestart={() => {
+          // Android: indirilen APK'nın sistem yükleyicisini (yeniden) aç.
+          // Web/diğer: sayfayı yenile.
+          if (Platform.OS === 'android' && downloadedUri.current) {
+            void installApk(downloadedUri.current);
+          } else {
+            restartApp();
+          }
+        }}
         onClose={cancelUpdate}
       />
     ) : null}
