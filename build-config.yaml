@@ -35,9 +35,9 @@ api:
   production: https://support.medipol.dev
 
 android:
-  # Backend https değil http olduğu sürece gerekli. HTTPS production'a
-  # geçince false yapabilirsin (temiz-metin trafiği tamamen kapanır).
-  uses_cleartext_traffic: true
+  # Cleartext (düz metin http) trafiği API adresinin şemasından OTOMATİK
+  # türetilir: lan/localhost (http) -> açık, production (https) -> kapalı.
+  # Zorlamak istersen aç:  uses_cleartext_traffic: true
 
 release:
   # Proguard/R8 kod küçültme + kaynak temizleme. Açınca APK/AAB küçülür ama

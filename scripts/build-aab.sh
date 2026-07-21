@@ -17,13 +17,17 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 cd "$(dirname "$0")/.."
 
-IFS=' ' read -r ENVNAME API VERSION VCODE < <(node -e '
+# AAB her zaman production hedefler (test API'si Play'e gitmesin).
+export APP_ENV="${APP_ENV:-production}"
+
+IFS=' ' read -r ENVNAME API VERSION VCODE CLEARTEXT < <(node -e '
   const fs = require("fs"), yaml = require("js-yaml");
   const c = yaml.load(fs.readFileSync("build-config.yaml", "utf8")) || {};
-  const env = c.environment || "lan";
+  const env = process.env.APP_ENV || c.environment || "lan";
   const api = process.env.EXPO_PUBLIC_API_URL || (c.api && c.api[env]) || "";
   const app = c.app || {};
-  process.stdout.write([env, api, app.version || "0.0.0", app.version_code || 1].join(" ") + "\n");
+  const cleartext = (c.android && c.android.uses_cleartext_traffic) ? "1" : "0";
+  process.stdout.write([env, api, app.version || "0.0.0", app.version_code || 1, cleartext].join(" ") + "\n");
 ')
 
 # Test API'si production yapıya sızmasın.
@@ -32,6 +36,31 @@ if [ "${REQUIRE_PRODUCTION:-1}" = "1" ] && [ "$ENVNAME" != "production" ]; then
   echo "      derlenmemeli. build-config.yaml'da environment: production yap ya da" >&2
   echo "      bilerek devam etmek için REQUIRE_PRODUCTION=0 ver." >&2
   exit 1
+fi
+
+# Güvenlik (H-1): kullanıcı token'ı düz metin gitmesin. Release yapısı gerçek,
+# HTTPS bir backend'e işaret etmeli ve temiz-metin trafiği kapalı olmalı.
+if [ "${REQUIRE_PRODUCTION:-1}" = "1" ]; then
+  case "$API" in
+    https://*) : ;;
+    *)
+      echo "HATA: API adresi HTTPS değil ('$API'). Bearer token düz metin HTTP" >&2
+      echo "      üzerinde araya girilerek çalınabilir. build-config.yaml'da" >&2
+      echo "      api.production'ı https:// bir adres yap." >&2
+      exit 1
+      ;;
+  esac
+  case "$API" in
+    *example.com*)
+      echo "HATA: API hâlâ placeholder ('$API'). Gerçek production adresini gir." >&2
+      exit 1
+      ;;
+  esac
+  if [ "$CLEARTEXT" = "1" ]; then
+    echo "HATA: uses_cleartext_traffic açık. Release'te düz-metin HTTP tamamen" >&2
+    echo "      kapatılmalı: build-config.yaml -> android.uses_cleartext_traffic: false" >&2
+    exit 1
+  fi
 fi
 
 if [ ! -f keystore.properties ]; then

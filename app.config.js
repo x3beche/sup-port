@@ -18,10 +18,16 @@ function loadBuildConfig() {
   }
 }
 
+// Aktif ortam: APP_ENV her şeyi geçersiz kılar (build-aab.sh production'a zorlar),
+// yoksa build-config.yaml'daki environment.
+function resolveEnvironment(cfg) {
+  return process.env.APP_ENV || cfg.environment || 'lan';
+}
+
 function resolveApiUrl(cfg) {
-  // Ortam değişkeni her şeyi geçersiz kılar (tek seferlik derlemeler için).
+  // Adresi doğrudan veren override (tek seferlik derlemeler için).
   if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
-  const env = cfg.environment || 'lan';
+  const env = resolveEnvironment(cfg);
   const url = cfg.api && cfg.api[env];
   if (!url) {
     console.warn(`build-config.yaml: '${env}' ortamı için api adresi yok.`);
@@ -36,6 +42,12 @@ module.exports = () => {
   const release = cfg.release || {};
   const background = (cfg.theme && cfg.theme.background) || base.backgroundColor;
   const apiUrl = resolveApiUrl(cfg);
+
+  // Cleartext (düz metin http) trafiği tam olarak API http olduğunda gerekir.
+  // build-config açıkça belirtmişse ona uy; yoksa adres şemasından türet:
+  // lan/localhost (http) -> açık, production (https) -> kapalı.
+  const cleartext =
+    cfg.android?.uses_cleartext_traffic ?? Boolean(apiUrl && apiUrl.startsWith('http://'));
 
   return {
     ...base,
@@ -61,7 +73,7 @@ module.exports = () => {
             minSdkVersion: sdk.min ?? 24,
             targetSdkVersion: sdk.target ?? 36,
             compileSdkVersion: sdk.compile ?? 36,
-            usesCleartextTraffic: cfg.android?.uses_cleartext_traffic ?? true,
+            usesCleartextTraffic: cleartext,
             // R8/Proguard: build-config.yaml release bloğundan.
             enableProguardInReleaseBuilds: release.minify ?? false,
             enableShrinkResourcesInReleaseBuilds: release.shrink_resources ?? false,
