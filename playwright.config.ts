@@ -4,6 +4,8 @@ const WEB_URL = process.env.WEB_URL ?? 'http://localhost:8090';
 
 export default defineConfig({
   testDir: './tests',
+  // Test paketini production DB'ye karşı çalıştırmayı engeller (bkz. dosya).
+  globalSetup: './tests/global-setup.ts',
   // Keep every Playwright artifact under tests/ so the repo root stays clean.
   outputDir: './tests/.artifacts',
   reporter: [['list'], ['html', { outputFolder: './tests/.report', open: 'never' }]],
