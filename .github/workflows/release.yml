@@ -1,8 +1,8 @@
 name: Release APK
 
 on:
-  push:
-    tags: ['v*']
+  # Yalnızca manuel: release'ler yerel imzalı artefaktlarla (gerçek keystore)
+  # elle yayınlanıyor; CI keystore secret'ı olmadan imzasız build üretir.
   workflow_dispatch:
     inputs:
       api_url:
