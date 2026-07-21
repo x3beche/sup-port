@@ -15,6 +15,14 @@ Her klasörde:
 - `todo.md` — nasıl yapacağız (backend + frontend adımları)
 - `research-prompt.md` — (gerekiyorsa) araştırma agent'ına verilecek prompt
 
+## Yeni modül adayları
+Eklenebilecek yeni modüller için kanıta dayalı, önceliklendirilmiş araştırma:
+[`new-modules-research.md`](./new-modules-research.md)
+([`new-modules-research-prompt.md`](./new-modules-research-prompt.md) çıktısı).
+Öne çıkan öneri sırası: **Nefes egzersizi → Sosyal bağ → Güneş/dışarı zamanı →
+Şükran günlüğü → Pomodoro**. Kritik not: şükran/günlük/ruh hali/finans **serbest
+metni sunucuya değil, cihazda** tutulmalı (rollup deseni).
+
 ## Ortak ilkeler
 - **Telif:** kitap/besin/egzersiz **içeriği** sunmayız; yalnızca açık lisanslı
   veri + kullanıcının kendi verisi. Uygulama içi içerik yalnızca kamu malıysa.
