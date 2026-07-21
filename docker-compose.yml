@@ -1,12 +1,15 @@
-# sup-port backend — Portainer stack.
+# sup-port backend — Portainer stack (Git ile otomatik deploy).
 #
-# Portainer'da bu dosyayı "Stack" olarak yükle ve aşağıdaki değişkenleri
-# stack ortam değişkenleri (Environment variables) olarak gir:
+# Portainer'da bu repoyu "Git repository" kaynaklı bir Stack olarak ekle ve
+# aşağıdaki değişkenleri stack ortam değişkeni (Environment variables) olarak gir:
 #   MONGODB_URI, DB_NAME, JWT_SECRET   (zorunlu)
-#   PORT                               (opsiyonel, varsayılan 4000)
+#   PORT                               (opsiyonel, container içi port; varsayılan 4000)
 #
-# Bu değerler backend'in config.yaml'ından gelir; container'a config.yaml
-# KOPYALANMAZ, kimlik bilgileri yalnızca ortam değişkeni olarak verilir.
+# GIT_SHA otomatik ayarlanır: deploy workflow her push'ta bu değeri commit
+# SHA'sına çeker; backend /version ucundan onu bildirir (canlı doğrulama).
+#
+# Port YAYINLANMAZ: backend main-network üzerinden erişilir. Proxy manager
+# container'a adıyla ulaşır: fastapi-backend-${DB_NAME}-app:${PORT:-4000}
 
 services:
   backend:
@@ -20,11 +23,8 @@ services:
       - DB_NAME=${DB_NAME}
       - JWT_SECRET=${JWT_SECRET}
       - PORT=${PORT:-4000}
-    # Uygulama backend'e doğrudan bağlanıyorsa portu yayınla. Eğer main-network
-    # üstünde bir ters proxy (Traefik/nginx) varsa bu satırları kaldırıp
-    # yönlendirmeyi proxy'de yap.
-    ports:
-      - "${PORT:-4000}:${PORT:-4000}"
+      # Deploy workflow her redeploy'da bunu yeni commit SHA'sıyla değiştirir.
+      - GIT_SHA=${GIT_SHA:-unknown}
     pull_policy: build
     networks:
       - main-network

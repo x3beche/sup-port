@@ -1,0 +1,132 @@
+name: Deploy to Portainer
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'backend/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    env:
+      # Ortama özel değerler repo variable'larından (Settings > Secrets and
+      # variables > Actions > Variables). Bir kez ayarla:
+      #   PORTAINER_HOST      örn. https://portainer.ornek.dev
+      #   PORTAINER_STACK_ID  Portainer'daki stack numarası
+      #   PORTAINER_ENDPOINT_ID  endpoint (environment) numarası
+      #   VERSION_URL         backend'in herkese açık /version adresi
+      #                       (proxy üzerinden, örn. https://api.ornek.dev/version)
+      #   REPO_USERNAME       GitHub kullanıcı adın (varsayılan x3beche)
+      PORTAINER_HOST: ${{ vars.PORTAINER_HOST }}
+      STACK_ID: ${{ vars.PORTAINER_STACK_ID }}
+      ENDPOINT_ID: ${{ vars.PORTAINER_ENDPOINT_ID }}
+      VERSION_URL: ${{ vars.VERSION_URL }}
+      REPO_USERNAME: ${{ vars.REPO_USERNAME || 'x3beche' }}
+    steps:
+      - name: Trigger Portainer pull & redeploy with GIT_SHA
+        env:
+          # Secrets (Settings > Secrets and variables > Actions > Secrets):
+          #   PORTAINER_TOKEN  Portainer API anahtarı (X-API-Key)
+          #   GH_PAT           repoyu çekmek için GitHub token (repo scope)
+          PORTAINER_TOKEN: ${{ secrets.PORTAINER_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # Mevcut stack'i çek: var olan Env değişkenlerini KORUYACAĞIZ.
+          stack=$(curl -fsSL -H "X-API-Key: ${PORTAINER_TOKEN}" \
+            "${PORTAINER_HOST}/api/stacks/${STACK_ID}")
+
+          # Uygulamanın açılması için ZORUNLU değişkenler. Biri stack'te
+          # yoksa (silinmiş, bozuk bir deploy kaybetmiş) dur — production'a
+          # bozuk bir Env basma.
+          existing_names=$(echo "$stack" | jq -r '(.Env // [])[].name' | sort -u)
+          required="MONGODB_URI DB_NAME JWT_SECRET"
+          missing=""
+          for k in $required; do
+            if ! echo "$existing_names" | grep -qx "$k"; then
+              missing="$missing $k"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "DURDURULDU: stack'te zorunlu env eksik:$missing"
+            echo "Yeniden çalıştırmadan önce API/UI'dan geri ekle."
+            exit 2
+          fi
+
+          # Yalnızca GIT_SHA'yı yeni commit'le değiştir, geri kalan her şeyi
+          # aynen koru. Kendini onaran: GIT_SHA kaysa bile sonraki deploy düzeltir.
+          env_array=$(echo "$stack" | jq --arg sha "$GITHUB_SHA" '
+            (.Env // [])
+            | map(select(.name != "GIT_SHA"))
+            + [{name: "GIT_SHA", value: $sha}]
+          ')
+
+          payload=$(jq -nc \
+            --arg pwd "$GH_PAT" \
+            --arg user "$REPO_USERNAME" \
+            --argjson env "$env_array" \
+            '{
+              RepositoryReferenceName: "refs/heads/master",
+              PullImage: false,
+              RepositoryAuthentication: true,
+              RepositoryUsername: $user,
+              RepositoryPassword: $pwd,
+              Env: $env
+            }')
+
+          # Portainer redeploy çağrısı `docker compose up`'ı inline çalıştırır
+          # ve imaj yeniden derlemesi birkaç dakika sürebilir. Ters proxy'nin
+          # boşta kalma zaman aşımı daha kısa olabilir ve Portainer hâlâ
+          # çalışırken 504 dönebilir. 504/502/timeout'u "istek kabul edildi,
+          # derleme sürüyor" say; doğrulamayı /version yoklaması yapsın.
+          http_code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+            --max-time 1500 \
+            -X PUT \
+            -H "X-API-Key: ${PORTAINER_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "${PORTAINER_HOST}/api/stacks/${STACK_ID}/git/redeploy?endpointId=${ENDPOINT_ID}" \
+            -d "$payload" || echo "000")
+          echo "Redeploy HTTP $http_code"
+          if [ "$http_code" = "200" ]; then
+            jq -r '.GitConfig.ConfigHash // .message // .' /tmp/resp.json || true
+          elif [ "$http_code" = "504" ] || [ "$http_code" = "502" ] || [ "$http_code" = "000" ]; then
+            echo "Proxy timeout / geçici hata — Portainer büyük olasılıkla hâlâ derliyor."
+            echo "Sonraki adım /version yoklamasıyla doğrulayacak."
+          else
+            echo "Beklenmeyen yanıt gövdesi:"
+            head -c 500 /tmp/resp.json || true
+            exit 1
+          fi
+
+      - name: Verify live backend reports the new SHA
+        # /version'ı 30sn'de bir, 20 deneme = 10 dk boyunca yoklar.
+        timeout-minutes: 11
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          expected="${GITHUB_SHA:0:7}"
+          echo "Yoklanıyor: ${VERSION_URL} (her 30sn, short_sha=${expected} bekleniyor)"
+
+          for i in $(seq 1 20); do
+            body=$(curl -fsSL --max-time 10 "${VERSION_URL}" 2>/dev/null || echo '{}')
+            got=$(echo "$body" | jq -r '.short_sha // "?"')
+            printf "[deneme %2d/20] got=%-8s expected=%s\n" "$i" "$got" "$expected"
+            if [ "$got" = "$expected" ]; then
+              echo "DOĞRULANDI: canlı backend ${got} SHA'sını bildiriyor."
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "ZAMAN AŞIMI: backend 10 dk içinde ${expected} bildirmedi."
+          exit 1
