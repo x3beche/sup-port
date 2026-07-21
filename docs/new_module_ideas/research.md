@@ -1,6 +1,7 @@
 # sup-port — Yeni Modül Araştırması (kanıta dayalı, önceliklendirilmiş)
 
-> [`new-modules-research-prompt.md`](./new-modules-research-prompt.md) çıktısı.
+> [`research-prompt.md`](./research-prompt.md) çıktısı. Ham kanıt tabanı (tüm
+> doğrulanmış iddialar + kaynaklar): [`evidence.md`](./evidence.md).
 > Yöntem: 6 arama açısı → 29 kaynak → 136 iddia → **25 iddia 3 oylu çekişmeli
 > doğrulamadan geçti (25/25 onaylandı, 0 çürütüldü)**. Bütçe nedeniyle bazı
 > adaylar biçimsel doğrulamaya girmedi; onlar için **arama-fazı birincil
