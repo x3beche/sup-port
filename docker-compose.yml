@@ -1,0 +1,34 @@
+# sup-port backend — Portainer stack.
+#
+# Portainer'da bu dosyayı "Stack" olarak yükle ve aşağıdaki değişkenleri
+# stack ortam değişkenleri (Environment variables) olarak gir:
+#   MONGODB_URI, DB_NAME, JWT_SECRET   (zorunlu)
+#   PORT                               (opsiyonel, varsayılan 4000)
+#
+# Bu değerler backend'in config.yaml'ından gelir; container'a config.yaml
+# KOPYALANMAZ, kimlik bilgileri yalnızca ortam değişkeni olarak verilir.
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fastapi-backend-${DB_NAME}-app
+    restart: always
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - DB_NAME=${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=${PORT:-4000}
+    # Uygulama backend'e doğrudan bağlanıyorsa portu yayınla. Eğer main-network
+    # üstünde bir ters proxy (Traefik/nginx) varsa bu satırları kaldırıp
+    # yönlendirmeyi proxy'de yap.
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    pull_policy: build
+    networks:
+      - main-network
+
+networks:
+  main-network:
+    external: true
