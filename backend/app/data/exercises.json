@@ -1,0 +1,1430 @@
+[
+  {
+    "key": "march_in_place",
+    "name_tr": "Yerinde Yürüyüş/Marş (Isınma)",
+    "name_en": "Marching in Place",
+    "category": "isinma",
+    "muscle_groups": [
+      "bacak",
+      "core"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 3.5,
+    "default": {
+      "duration_sec": 180
+    },
+    "steps": [
+      "Ayakta dik durun.",
+      "Dizleri sırayla kalça hizasına doğru kaldırarak yerinde yürüyün.",
+      "Kolları doğal şekilde sallayın, 3-5 dakika."
+    ],
+    "cautions": [
+      "Denge sorununda bir yere tutunun.",
+      "Baş dönmesi olursa durun."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "17170",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim (CC-BY veya tescilli-kendi)",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "arm_circles",
+    "name_tr": "Kol Çevirme (Isınma)",
+    "name_en": "Arm Circles",
+    "category": "isinma",
+    "muscle_groups": [
+      "omuz"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.8,
+    "default": {
+      "duration_sec": 60
+    },
+    "steps": [
+      "Kollar yana açık.",
+      "Küçükten büyüğe daireler çizin.",
+      "30 sn ileri, 30 sn geri."
+    ],
+    "cautions": [
+      "Omuz ağrısında hareket açısını küçültün."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02024",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "leg_swings",
+    "name_tr": "Bacak Sallama (Dinamik Isınma)",
+    "name_en": "Leg Swings",
+    "category": "isinma",
+    "muscle_groups": [
+      "kalca",
+      "bacak"
+    ],
+    "equipment": "sandalye",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 3.0,
+    "default": {
+      "duration_sec": 60
+    },
+    "steps": [
+      "Sandalyeye tutunun.",
+      "Bir bacağı öne-arkaya kontrollü sallayın.",
+      "Taraf değiştirin."
+    ],
+    "cautions": [
+      "Kalça/dizde keskin ağrıda durun."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02056",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "cat_cow",
+    "name_tr": "Kedi-Deve (Omurga Isınması)",
+    "name_en": "Cat-Cow Stretch",
+    "category": "isinma",
+    "muscle_groups": [
+      "sirt",
+      "core"
+    ],
+    "equipment": "mat",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.3,
+    "default": {
+      "duration_sec": 60
+    },
+    "steps": [
+      "Emekleme pozisyonu.",
+      "Nefes alırken beli çukurlaştırın (deve).",
+      "Verirken sırtı yuvarlayın (kedi)."
+    ],
+    "cautions": [
+      "Bilek ağrısında yumruk yapın veya dirsekten destek alın."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02150",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "bodyweight_squat",
+    "name_tr": "Vücut Ağırlığı Squat (Çömelme)",
+    "name_en": "Bodyweight Squat",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "bacak",
+      "kalca",
+      "core"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 3.0,
+    "default": {
+      "sets": 3,
+      "reps": 12
+    },
+    "steps": [
+      "Ayaklar omuz genişliğinde.",
+      "Kalçayı geriye iterek oturur gibi çömelin.",
+      "Dizler ayak ucunu çok geçmesin.",
+      "Topuktan iterek kalkın."
+    ],
+    "cautions": [
+      "Diz ağrısı olanlar açıyı sınırlasın; gerekirse sandalyeye oturup kalkma varyantı.",
+      "Bel ağrısında sırtı nötr tutun."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Bodyweight_Squat",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "chair_sit_to_stand",
+    "name_tr": "Sandalyeden Kalkma",
+    "name_en": "Chair Sit-to-Stand",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "bacak",
+      "kalca"
+    ],
+    "equipment": "sandalye",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.8,
+    "default": {
+      "sets": 3,
+      "reps": 10
+    },
+    "steps": [
+      "Sandalyenin ön kısmına oturun.",
+      "Kolları öne uzatıp topuktan iterek kalkın.",
+      "Kontrollü oturun."
+    ],
+    "cautions": [
+      "Fazla kilolu/başlangıç için ideal (düşük eklem yükü).",
+      "Denge için yakında tutamak bulundurun."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02340",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "wall_pushup",
+    "name_tr": "Duvar Şınavı",
+    "name_en": "Wall Push-up",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "gogus",
+      "omuz",
+      "triceps"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 3.5,
+    "default": {
+      "sets": 3,
+      "reps": 12
+    },
+    "steps": [
+      "Duvara kol mesafesinde durun.",
+      "Elleri omuz hizasında duvara koyun.",
+      "Dirsekleri bükerek göğsü duvara yaklaştırın, itin."
+    ],
+    "cautions": [
+      "Bilek/omuz ağrısında açıyı azaltın.",
+      "Başlangıç ve fazla kilolu için yer şınavına güvenli alternatif."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Pushups_Wall",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "knee_pushup",
+    "name_tr": "Diz Üstü Şınav",
+    "name_en": "Knee Push-up",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "gogus",
+      "omuz",
+      "triceps",
+      "core"
+    ],
+    "equipment": "mat",
+    "difficulty": "orta",
+    "low_impact": true,
+    "met": 3.8,
+    "default": {
+      "sets": 3,
+      "reps": 10
+    },
+    "steps": [
+      "Dizler yerde, eller omuz genişliğinde.",
+      "Vücudu düz tutarak göğsü yere yaklaştırın.",
+      "İtin."
+    ],
+    "cautions": [
+      "Diz altına yastık koyun.",
+      "Bel çökmesin."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Pushups_Close_and_Wide_Hand_Positions",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "standard_pushup",
+    "name_tr": "Standart Şınav",
+    "name_en": "Push-up",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "gogus",
+      "omuz",
+      "triceps",
+      "core"
+    ],
+    "equipment": "mat",
+    "difficulty": "ileri",
+    "low_impact": true,
+    "met": 3.8,
+    "default": {
+      "sets": 3,
+      "reps": 12
+    },
+    "steps": [
+      "Şınav pozisyonu, vücut düz.",
+      "Göğsü yere yaklaştırın.",
+      "İtin."
+    ],
+    "cautions": [
+      "Bel çökmesin/kalça yükselmesin."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Pushups",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "glute_bridge",
+    "name_tr": "Kalça Köprüsü",
+    "name_en": "Glute Bridge",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "kalca",
+      "core",
+      "bacak"
+    ],
+    "equipment": "mat",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 3.0,
+    "default": {
+      "sets": 3,
+      "reps": 12
+    },
+    "steps": [
+      "Sırtüstü yatın, dizler bükük.",
+      "Kalçayı yukarı kaldırın.",
+      "Sıkıp indirin."
+    ],
+    "cautions": [
+      "Bel ağrısında hareketi küçültün."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Butt_Lift_Bridge",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "plank",
+    "name_tr": "Plank (Statik Karın)",
+    "name_en": "Plank",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "core",
+      "omuz",
+      "sirt"
+    ],
+    "equipment": "mat",
+    "difficulty": "orta",
+    "low_impact": true,
+    "met": 2.8,
+    "default": {
+      "duration_sec": 30
+    },
+    "steps": [
+      "Dirsekler omuz altında.",
+      "Vücut düz bir çizgi.",
+      "Karnı sıkıp tutun."
+    ],
+    "cautions": [
+      "Bel çökerse dizden destekli yapın.",
+      "Yüksek tansiyonda nefes tutmayın."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Plank",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "bird_dog",
+    "name_tr": "Kuş-Köpek",
+    "name_en": "Bird Dog",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "core",
+      "sirt",
+      "kalca"
+    ],
+    "equipment": "mat",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 3.0,
+    "default": {
+      "sets": 3,
+      "reps": 10
+    },
+    "steps": [
+      "Emekleme pozisyonu.",
+      "Karşı kol ve bacağı uzatın.",
+      "Dönüşümlü tekrarlayın."
+    ],
+    "cautions": [
+      "Bel nötr kalsın."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Bird_Dog",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "dead_bug",
+    "name_tr": "Ölü Böcek",
+    "name_en": "Dead Bug",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "core"
+    ],
+    "equipment": "mat",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.8,
+    "default": {
+      "sets": 3,
+      "reps": 10
+    },
+    "steps": [
+      "Sırtüstü, kollar tavana, dizler 90°.",
+      "Karşı kol-bacağı uzatın.",
+      "Beli yere yapışık tutun."
+    ],
+    "cautions": [
+      "Bel yerden kalkmasın."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02024",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "lunge",
+    "name_tr": "Öne Hamle (Lunge)",
+    "name_en": "Lunge",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "bacak",
+      "kalca"
+    ],
+    "equipment": "yok",
+    "difficulty": "orta",
+    "low_impact": true,
+    "met": 3.8,
+    "default": {
+      "sets": 3,
+      "reps": 10
+    },
+    "steps": [
+      "Bir adım öne atın.",
+      "Arka dizi yere yaklaştırın.",
+      "İtip başlangıca dönün."
+    ],
+    "cautions": [
+      "Diz ağrısında derinliği azaltın; dengeye tutunun."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Bodyweight_Lunge",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "calf_raise",
+    "name_tr": "Topuk Yükseltme",
+    "name_en": "Calf Raise",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "bacak"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 3.0,
+    "default": {
+      "sets": 3,
+      "reps": 15
+    },
+    "steps": [
+      "Ayakta dik durun.",
+      "Parmak ucuna yükselin.",
+      "Kontrollü inin."
+    ],
+    "cautions": [
+      "Denge için duvara tutunun."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Standing_Calf_Raises",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "band_row",
+    "name_tr": "Direnç Bandı ile Kürek",
+    "name_en": "Resistance Band Row",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "sirt",
+      "biceps"
+    ],
+    "equipment": "direnc_bandi",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 3.5,
+    "default": {
+      "sets": 3,
+      "reps": 12
+    },
+    "steps": [
+      "Bandı ayaklardan geçirin/sabitleyin.",
+      "Dirsekleri geriye çekin.",
+      "Kürek kemiklerini sıkın."
+    ],
+    "cautions": [
+      "Omuzları kulaklardan uzak tutun."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02054",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "band_chest_press",
+    "name_tr": "Direnç Bandı Göğüs İtişi",
+    "name_en": "Resistance Band Chest Press",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "gogus",
+      "omuz",
+      "triceps"
+    ],
+    "equipment": "direnc_bandi",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 3.5,
+    "default": {
+      "sets": 3,
+      "reps": 12
+    },
+    "steps": [
+      "Bandı sırtınızın arkasından geçirin.",
+      "Kolları öne itin.",
+      "Kontrollü geri getirin."
+    ],
+    "cautions": [
+      "Bandın sağlamlığını kontrol edin."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02054",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "dumbbell_shoulder_press",
+    "name_tr": "Dambıl Omuz Presi",
+    "name_en": "Dumbbell Shoulder Press",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "omuz",
+      "triceps"
+    ],
+    "equipment": "dambil",
+    "difficulty": "orta",
+    "low_impact": true,
+    "met": 5.0,
+    "default": {
+      "sets": 3,
+      "reps": 10
+    },
+    "steps": [
+      "Dambıllar omuz hizasında.",
+      "Yukarı itin.",
+      "Kontrollü indirin."
+    ],
+    "cautions": [
+      "Beli aşırı çukurlaştırmayın; uygun ağırlık seçin."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Dumbbell_Shoulder_Press",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "dumbbell_biceps_curl",
+    "name_tr": "Dambıl Biceps Curl",
+    "name_en": "Dumbbell Biceps Curl",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "biceps",
+      "onkol"
+    ],
+    "equipment": "dambil",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 3.5,
+    "default": {
+      "sets": 3,
+      "reps": 12
+    },
+    "steps": [
+      "Dambıllar yanlarda.",
+      "Dirsekten bükerek kaldırın.",
+      "İndirin."
+    ],
+    "cautions": [
+      "Sırtı sallamayın."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Dumbbell_Bicep_Curl",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "dumbbell_goblet_squat",
+    "name_tr": "Dambıl Goblet Squat",
+    "name_en": "Dumbbell Goblet Squat",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "bacak",
+      "kalca",
+      "core"
+    ],
+    "equipment": "dambil",
+    "difficulty": "orta",
+    "low_impact": true,
+    "met": 5.0,
+    "default": {
+      "sets": 3,
+      "reps": 10
+    },
+    "steps": [
+      "Dambılı göğüs önünde tutun.",
+      "Çömelin.",
+      "Topuktan itip kalkın."
+    ],
+    "cautions": [
+      "Diz ağrısında derinliği sınırlayın."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02052",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "dumbbell_deadlift",
+    "name_tr": "Dambıl Deadlift (Ölü Kaldırış)",
+    "name_en": "Dumbbell Romanian Deadlift",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "kalca",
+      "bacak",
+      "sirt"
+    ],
+    "equipment": "dambil",
+    "difficulty": "ileri",
+    "low_impact": true,
+    "met": 5.0,
+    "default": {
+      "sets": 3,
+      "reps": 10
+    },
+    "steps": [
+      "Dambıllar önde.",
+      "Kalçayı geriye iterek eğilin, sırt düz.",
+      "Kalçayı öne iterek doğrulun."
+    ],
+    "cautions": [
+      "Bel yuvarlanmasın; hafif ağırlıkla başlayın."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02052",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "superman",
+    "name_tr": "Superman (Sırt Ekstansiyonu)",
+    "name_en": "Superman",
+    "category": "kuvvet",
+    "muscle_groups": [
+      "sirt",
+      "kalca"
+    ],
+    "equipment": "mat",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.8,
+    "default": {
+      "sets": 3,
+      "reps": 12
+    },
+    "steps": [
+      "Yüzüstü yatın.",
+      "Kol ve bacakları hafif kaldırın.",
+      "İndirin."
+    ],
+    "cautions": [
+      "Aşırı gerdirmeyin; bel ağrısında küçük hareket."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Superman",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "brisk_walk",
+    "name_tr": "Tempolu Yürüyüş",
+    "name_en": "Brisk Walking",
+    "category": "kardiyo",
+    "muscle_groups": [
+      "bacak",
+      "kalca"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 4.3,
+    "default": {
+      "duration_sec": 1800
+    },
+    "steps": [
+      "Dik durun.",
+      "5.6 km/s civarı tempoda yürüyün.",
+      "Kolları sallayın."
+    ],
+    "cautions": [
+      "Fazla kilolu/başlangıç için en güvenli kardiyo (düşük eklem yükü).",
+      "Nefes darlığında yavaşlayın."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "17200",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "marching_cardio",
+    "name_tr": "Yüksek Diz Marş (Düşük Etkili Kardiyo)",
+    "name_en": "Low-Impact High Knees",
+    "category": "kardiyo",
+    "muscle_groups": [
+      "bacak",
+      "core"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 3.8,
+    "default": {
+      "duration_sec": 60
+    },
+    "steps": [
+      "Yerinde marş yapın.",
+      "Dizleri belirgin kaldırın.",
+      "Tempoyu artırın (zıplamadan)."
+    ],
+    "cautions": [
+      "Zıplama yok; eklem dostu."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02022",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "step_touch",
+    "name_tr": "Yana Adım (Step Touch)",
+    "name_en": "Step Touch",
+    "category": "kardiyo",
+    "muscle_groups": [
+      "bacak"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 4.8,
+    "default": {
+      "duration_sec": 120
+    },
+    "steps": [
+      "Bir adım yana atın.",
+      "Diğer ayağı yanına getirin.",
+      "Kollarla ritim ekleyin."
+    ],
+    "cautions": [
+      "Düşük etkili aerobik; başlangıç dostu."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02005",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "stationary_bike",
+    "name_tr": "Sabit Bisiklet (Orta Şiddet)",
+    "name_en": "Stationary Cycling, moderate",
+    "category": "kardiyo",
+    "muscle_groups": [
+      "bacak",
+      "kalca"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 6.8,
+    "default": {
+      "duration_sec": 1200
+    },
+    "steps": [
+      "Sele yüksekliğini ayarlayın.",
+      "Orta dirençte pedal çevirin."
+    ],
+    "cautions": [
+      "Eklem yükü çok düşük; fazla kilolu için ideal.",
+      "Diz açısını sele ile ayarlayın."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02010",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "jumping_jacks",
+    "name_tr": "Jumping Jack (Yıldız Zıplama)",
+    "name_en": "Jumping Jacks",
+    "category": "kardiyo",
+    "muscle_groups": [
+      "bacak",
+      "omuz"
+    ],
+    "equipment": "yok",
+    "difficulty": "orta",
+    "low_impact": false,
+    "met": 7.5,
+    "default": {
+      "duration_sec": 45
+    },
+    "steps": [
+      "Kol ve bacakları açarak zıplayın.",
+      "Kapatarak dönün."
+    ],
+    "cautions": [
+      "YÜKSEK etkili — diz/ayak bileği sorununda step-touch tercih edin.",
+      "Fazla kilolu için önerilmez."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Jumping_Jacks",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "mountain_climber",
+    "name_tr": "Dağcı (Mountain Climber)",
+    "name_en": "Mountain Climbers",
+    "category": "kardiyo",
+    "muscle_groups": [
+      "core",
+      "bacak",
+      "omuz"
+    ],
+    "equipment": "mat",
+    "difficulty": "ileri",
+    "low_impact": false,
+    "met": 8.0,
+    "default": {
+      "duration_sec": 30
+    },
+    "steps": [
+      "Şınav pozisyonu.",
+      "Dizleri sırayla göğse çekin.",
+      "Tempoyu koruyun."
+    ],
+    "cautions": [
+      "Bilek/omuz yükü yüksek; ileri seviye."
+    ],
+    "source": {
+      "dataset": "free-exercise-db",
+      "id": "Mountain_Climbers",
+      "license": "Unlicense"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "burpee",
+    "name_tr": "Burpee",
+    "name_en": "Burpee",
+    "category": "kardiyo",
+    "muscle_groups": [
+      "tum_vucut"
+    ],
+    "equipment": "mat",
+    "difficulty": "ileri",
+    "low_impact": false,
+    "met": 8.0,
+    "default": {
+      "duration_sec": 30
+    },
+    "steps": [
+      "Çömelin, elleri yere koyun.",
+      "Bacakları geri atın (şınav).",
+      "Geri toplayıp zıplayın."
+    ],
+    "cautions": [
+      "Yüksek şiddet; başlangıç/fazla kilolu için önerilmez."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02214",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "hamstring_stretch",
+    "name_tr": "Arka Bacak (Hamstring) Esnetme",
+    "name_en": "Hamstring Stretch",
+    "category": "soguma",
+    "muscle_groups": [
+      "bacak"
+    ],
+    "equipment": "mat",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.3,
+    "default": {
+      "duration_sec": 30
+    },
+    "steps": [
+      "Oturun, bir bacağı uzatın.",
+      "Öne doğru nazikçe uzanın.",
+      "30 sn tutun."
+    ],
+    "cautions": [
+      "Zıplayarak germeyin; nazik ve sabit."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02101",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "quad_stretch",
+    "name_tr": "Ön Bacak (Quadriceps) Esnetme",
+    "name_en": "Quadriceps Stretch",
+    "category": "soguma",
+    "muscle_groups": [
+      "bacak"
+    ],
+    "equipment": "sandalye",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.3,
+    "default": {
+      "duration_sec": 30
+    },
+    "steps": [
+      "Ayakta, bir yere tutunun.",
+      "Ayak bileğini tutup topuğu kalçaya çekin.",
+      "30 sn tutun."
+    ],
+    "cautions": [
+      "Dengeye tutunun."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02101",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "calf_stretch",
+    "name_tr": "Baldır Esnetme",
+    "name_en": "Calf Stretch",
+    "category": "soguma",
+    "muscle_groups": [
+      "bacak"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.3,
+    "default": {
+      "duration_sec": 30
+    },
+    "steps": [
+      "Duvara yaslanın.",
+      "Bir bacağı geriye uzatın, topuk yerde.",
+      "30 sn tutun."
+    ],
+    "cautions": [
+      "Nazik gerginlik hissi yeterli."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02101",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "chest_stretch",
+    "name_tr": "Göğüs Esnetme",
+    "name_en": "Chest Stretch",
+    "category": "soguma",
+    "muscle_groups": [
+      "gogus",
+      "omuz"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.3,
+    "default": {
+      "duration_sec": 30
+    },
+    "steps": [
+      "Elleri arkada kenetleyin.",
+      "Kolları hafifçe yukarı-geri açın.",
+      "30 sn tutun."
+    ],
+    "cautions": [
+      "Omuz ağrısında açıyı azaltın."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02101",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "child_pose",
+    "name_tr": "Çocuk Pozu (Soğuma)",
+    "name_en": "Child's Pose",
+    "category": "soguma",
+    "muscle_groups": [
+      "sirt",
+      "kalca"
+    ],
+    "equipment": "mat",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.3,
+    "default": {
+      "duration_sec": 45
+    },
+    "steps": [
+      "Diz üstü oturun.",
+      "Öne uzanıp alnı yere koyun.",
+      "Derin nefes alın."
+    ],
+    "cautions": [
+      "Diz ağrısında altına yastık."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02150",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "neck_stretch",
+    "name_tr": "Boyun Esnetme",
+    "name_en": "Neck Stretch",
+    "category": "esneklik",
+    "muscle_groups": [
+      "boyun"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.3,
+    "default": {
+      "duration_sec": 30
+    },
+    "steps": [
+      "Başı nazikçe bir omuza eğin.",
+      "30 sn tutun.",
+      "Taraf değiştirin."
+    ],
+    "cautions": [
+      "Ani/sert hareket yapmayın."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02101",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "seated_forward_fold",
+    "name_tr": "Oturarak Öne Uzanma",
+    "name_en": "Seated Forward Fold",
+    "category": "esneklik",
+    "muscle_groups": [
+      "sirt",
+      "bacak"
+    ],
+    "equipment": "mat",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.3,
+    "default": {
+      "duration_sec": 40
+    },
+    "steps": [
+      "Oturun, bacaklar uzalı.",
+      "Öne nazikçe uzanın.",
+      "Nefesle derinleştirin."
+    ],
+    "cautions": [
+      "Sırtı zorlamayın."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02150",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "single_leg_stand",
+    "name_tr": "Tek Ayak Denge",
+    "name_en": "Single-Leg Stand",
+    "category": "denge",
+    "muscle_groups": [
+      "bacak",
+      "core"
+    ],
+    "equipment": "sandalye",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.3,
+    "default": {
+      "duration_sec": 30
+    },
+    "steps": [
+      "Sandalyeye tutunun.",
+      "Bir ayağı hafif kaldırın.",
+      "30 sn dengede kalın, değiştirin."
+    ],
+    "cautions": [
+      "Düşme riskine karşı yakında tutamak."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02225",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "heel_toe_walk",
+    "name_tr": "Topuk-Parmak Yürüyüş (Denge)",
+    "name_en": "Heel-to-Toe Walk",
+    "category": "denge",
+    "muscle_groups": [
+      "bacak",
+      "core"
+    ],
+    "equipment": "yok",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.5,
+    "default": {
+      "duration_sec": 60
+    },
+    "steps": [
+      "Bir ayağın topuğunu diğerinin parmağına değdirerek düz çizgide yürüyün."
+    ],
+    "cautions": [
+      "Duvar yakınında yapın."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02225",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "side_leg_raise",
+    "name_tr": "Yana Bacak Kaldırma (Denge+Kalça)",
+    "name_en": "Standing Side Leg Raise",
+    "category": "denge",
+    "muscle_groups": [
+      "kalca",
+      "bacak"
+    ],
+    "equipment": "sandalye",
+    "difficulty": "baslangic",
+    "low_impact": true,
+    "met": 2.8,
+    "default": {
+      "sets": 2,
+      "reps": 12
+    },
+    "steps": [
+      "Sandalyeye tutunun.",
+      "Bir bacağı yana kaldırın.",
+      "İndirin, değiştirin."
+    ],
+    "cautions": [
+      "Gövdeyi dik tutun."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02024",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  },
+  {
+    "key": "toe_stand_balance",
+    "name_tr": "Parmak Ucu Denge",
+    "name_en": "Toe Stand Balance",
+    "category": "denge",
+    "muscle_groups": [
+      "bacak",
+      "core"
+    ],
+    "equipment": "sandalye",
+    "difficulty": "orta",
+    "low_impact": true,
+    "met": 2.5,
+    "default": {
+      "duration_sec": 20
+    },
+    "steps": [
+      "Tutunarak parmak ucunda yükselin.",
+      "Dengede tutun.",
+      "İnin."
+    ],
+    "cautions": [
+      "Denge zayıfsa iki elle tutunun."
+    ],
+    "source": {
+      "dataset": "compendium",
+      "id": "02225",
+      "license": "citation"
+    },
+    "image": {
+      "source_url": "kendi_illustrasyon",
+      "license": "kendi-uretim",
+      "type": "illustrasyon"
+    }
+  }
+]

@@ -67,6 +67,18 @@ MODULES: tuple[Module, ...] = (
         ),
     ),
     Module(
+        key="workout", title="Egzersiz", icon="dumbbell", color="#F2622E",
+        unit="dk", target=30, step=10, steps=(10, 20, 30),
+        category="Hareket", description="Antrenman ve vücut takibi",
+        about=(
+            "Ev/ekipmansız egzersiz kütüphanesinden antrenman yap, süreni ve "
+            "yaktığın kaloriyi kaydet. Boy-kilo ve bel çevresi takibiyle BMI'ni "
+            "gör, haftalık WHO aktivite hedefine (150–300 dk + 2 gün kuvvet) "
+            "ilerle. Başlangıç ve fazla kilolu için düşük etkili hareketler "
+            "öne çıkar. Genel bilgidir, tıbbi tavsiye değildir."
+        ),
+    ),
+    Module(
         key="steps", title="Adım", icon="steps", color="#F5A623",
         unit="adım", target=8000, step=500, steps=(500, 1000, 2500),
         category="Hareket", description="Günlük hareket",

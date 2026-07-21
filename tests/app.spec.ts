@@ -182,6 +182,74 @@ test.describe('Diş fırçalama', () => {
   });
 });
 
+test.describe('Spor / Egzersiz', () => {
+  test('egzersiz modülü kendi ekranını açar', async ({ page }) => {
+    await registerThroughUi(page, 'spor-open');
+    await page.getByTestId('tile-workout').click();
+    await expect(page.getByTestId('spor-screen')).toBeVisible();
+    // Jenerik sayaç değil.
+    await expect(page.getByTestId('module-screen-workout')).toHaveCount(0);
+    await expect(page.getByTestId('spor-disclaimer')).toBeVisible();
+    // Yeni kullanıcıya güvenlik taraması önerilir.
+    await expect(page.getByTestId('parq-prompt')).toBeVisible();
+  });
+
+  test('PAR-Q taraması tamamlanınca uyarı kalkar', async ({ page }) => {
+    await registerThroughUi(page, 'spor-parq');
+    await page.getByTestId('tile-workout').click();
+    await page.getByTestId('parq-prompt').click();
+    await expect(page.getByTestId('parq-sheet')).toBeVisible();
+    // Varsayılan tüm yanıtlar "Hayır" — doğrudan tamamla.
+    await page.getByTestId('parq-save').click();
+    await expect(page.getByTestId('parq-sheet')).toHaveCount(0);
+    await expect(page.getByTestId('parq-prompt')).toHaveCount(0);
+  });
+
+  test('ölçüm eklenince BMI görünür', async ({ page }) => {
+    await registerThroughUi(page, 'spor-bmi');
+    await page.getByTestId('tile-workout').click();
+    await page.getByTestId('add-metric').click();
+    await expect(page.getByTestId('body-metric-sheet')).toBeVisible();
+
+    await page.getByTestId('metric-weight').fill('90');
+    await page.getByTestId('metric-height').fill('175');
+    await page.getByTestId('metric-save').click();
+
+    await expect(page.getByTestId('body-metric-sheet')).toHaveCount(0);
+    // 90 / 1.75^2 ≈ 29.4 → BMI rozeti çıkar.
+    await expect(page.getByTestId('bmi-value')).toContainText('BMI', { timeout: 15_000 });
+    await expect(page.getByTestId('bmi-weight')).toContainText('90');
+  });
+
+  test('kütüphaneden antrenman kaydedilir ve güne yansır', async ({ page }) => {
+    await registerThroughUi(page, 'spor-workout');
+    await page.getByTestId('tile-workout').click();
+    await page.getByTestId('open-library').click();
+    await expect(page.getByTestId('exercise-library')).toBeVisible();
+
+    // Tempolu yürüyüş (30 dk) ekle ve kaydet.
+    await page.getByTestId('ex-add-brisk_walk').click();
+    await page.getByTestId('library-save').click();
+
+    await expect(page.getByTestId('exercise-library')).toHaveCount(0);
+    // Bugünkü antrenman kartı görünür.
+    await expect(page.getByTestId('spor-today')).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('kütüphane düşük etkili filtresi yüksek etkiliyi gizler', async ({ page }) => {
+    await registerThroughUi(page, 'spor-lowimpact');
+    await page.getByTestId('tile-workout').click();
+    await page.getByTestId('open-library').click();
+    await expect(page.getByTestId('exercise-library')).toBeVisible();
+
+    // Burpee (yüksek etkili) filtre kapalıyken görünür.
+    await expect(page.getByTestId('ex-burpee')).toBeVisible();
+    await page.getByTestId('library-lowimpact').click();
+    // Düşük etkili filtresi açılınca burpee gizlenir.
+    await expect(page.getByTestId('ex-burpee')).toHaveCount(0, { timeout: 15_000 });
+  });
+});
+
 test.describe('Yeni davranışlar', () => {
   test('hızlı arka arkaya dokunuşların hiçbiri kaybolmaz', async ({ page }) => {
     await registerThroughUi(page, 'burst');

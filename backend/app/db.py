@@ -57,6 +57,16 @@ async def _ensure_indexes(db: AsyncDatabase) -> None:
     await db["brush_days"].create_index(
         [("user_id", ASCENDING), ("complete", ASCENDING), ("date", ASCENDING)],
     )
+    # Spor: profil kullanıcı başına tek belge.
+    await db["spor_profiles"].create_index([("user_id", ASCENDING)], unique=True)
+    # Vücut ölçümü: kullanıcı/gün tek belge (upsert), tarih aralığı sorgusu için sıralı.
+    await db["body_metrics"].create_index(
+        [("user_id", ASCENDING), ("date", ASCENDING)],
+        unique=True,
+    )
+    # Antrenmanlar: günde birden çok olabilir; kullanıcı+tarih aralık sorgusu
+    # (günlük liste, haftalık hedef) bu indeksi kullanır.
+    await db["workouts"].create_index([("user_id", ASCENDING), ("date", ASCENDING)])
     # Revoked tokens are only useful until they expire on their own, so Mongo
     # drops each entry at its own expires_at instead of the list growing forever.
     await db["revoked_tokens"].create_index("expires_at", expireAfterSeconds=0)

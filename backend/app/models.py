@@ -87,6 +87,42 @@ class BrushStatus(BaseModel):
     just_completed: bool = False
 
 
+Sex = Literal["erkek", "kadin"]
+ActivityLevel = Literal["sedanter", "hafif", "orta", "aktif", "cok_aktif"]
+WeightGoal = Literal["ver", "koru", "al"]
+
+
+class SporProfileUpdate(BaseModel):
+    height_cm: float | None = Field(default=None, gt=50, le=260)
+    sex: Sex | None = None
+    activity_level: ActivityLevel | None = None
+    goal: WeightGoal | None = None
+    target_weight_kg: float | None = Field(default=None, gt=20, le=500)
+    # Asya-Pasifik BMI/bel eşiklerini kullan (fazla kilolu ≥23, obez ≥27.5).
+    asian_thresholds: bool | None = None
+
+
+class ParqSubmit(BaseModel):
+    # PAR-Q+ kısa tarama: 7 evet/hayır. Herhangi biri evet → hekime danış işareti.
+    answers: list[bool] = Field(min_length=7, max_length=7)
+
+
+class BodyMetricInput(BaseModel):
+    weight_kg: float = Field(gt=20, le=500)
+    waist_cm: float | None = Field(default=None, gt=30, le=300)
+
+
+class WorkoutItemInput(BaseModel):
+    key: str = Field(min_length=1, max_length=64)
+    sets: int | None = Field(default=None, ge=1, le=50)
+    reps: int | None = Field(default=None, ge=1, le=500)
+    duration_sec: int | None = Field(default=None, ge=1, le=36_000)
+
+
+class WorkoutInput(BaseModel):
+    items: list[WorkoutItemInput] = Field(min_length=1, max_length=40)
+
+
 class TargetUpdate(BaseModel):
     # Zero would make the completion ratio undefined, so the floor is exclusive.
     target: float = Field(gt=0, le=1_000_000)

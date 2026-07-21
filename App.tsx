@@ -8,6 +8,7 @@ import { AuthScreen } from './src/screens/AuthScreen';
 import { BrushScreen } from './src/screens/BrushScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ModuleScreen } from './src/screens/ModuleScreen';
+import { SporScreen } from './src/screens/SporScreen';
 import { StoreDetailScreen } from './src/screens/StoreDetailScreen';
 import { StoreScreen } from './src/screens/StoreScreen';
 import { theme } from './src/theme';
@@ -65,9 +66,15 @@ function Shell() {
   }
 
   if (route.name === 'module') {
-    // Diş fırçalama jenerik sayaç yerine kendi ekranını kullanır (yuvalar, seri,
-    // 2 dk sayaç). Diğer modüller ortak ModuleScreen'de.
-    const Screen = route.module.key === 'brush' ? BrushScreen : ModuleScreen;
+    // Bazı modüller jenerik sayaç yerine kendi zengin ekranını kullanır (diş
+    // fırçalama: yuvalar/seri/2 dk sayaç; spor: kütüphane/BMI/hedef). Diğerleri
+    // ortak ModuleScreen'de.
+    const Screen =
+      route.module.key === 'brush'
+        ? BrushScreen
+        : route.module.key === 'workout'
+          ? SporScreen
+          : ModuleScreen;
     return (
       <ScreenTransition key={`module-${route.module.key}`} direction="forward">
         <Screen module={route.module} onBack={() => goHome()} />

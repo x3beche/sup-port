@@ -12,6 +12,6 @@ db_name: support
 jwt_secret: <rastgele-uzun-bir-dize>
 
 # OpenRouter — LLM öneri/özet üretimi (opsiyonel). Boşsa LLM özellikleri kapalı.
-# Ucuz model seç: girdi+çıktı 1M'de < 0.50 USD (ör. gemini-2.0-flash-lite).
+# Ucuz model seç: girdi+çıktı 1M'de < 0.50 USD (ör. gemini-2.5-flash-lite).
 # openrouter_api_key: sk-or-v1-...
-# openrouter_model: google/gemini-2.0-flash-lite-001
+# openrouter_model: google/gemini-2.5-flash-lite

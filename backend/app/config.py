@@ -83,7 +83,7 @@ class Settings:
         self.openrouter_model: str = (
             os.getenv("OPENROUTER_MODEL")
             or data.get("openrouter_model")
-            or "google/gemini-2.0-flash-lite-001"
+            or "google/gemini-2.5-flash-lite"
         )
         self.openrouter_base_url: str = (
             os.getenv("OPENROUTER_BASE_URL")

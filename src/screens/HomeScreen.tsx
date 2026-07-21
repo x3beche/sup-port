@@ -77,9 +77,9 @@ export function HomeScreen({
 
   const openQuickAdd = useCallback(
     (module: ModuleProgress) => {
-      // Diş fırçalama sayaçla değil sabah/akşam yuvalarıyla çalışır; hızlı "+1"
-      // brush_days ile çelişeceği için uzun basış onun ekranını açar.
-      if (module.key === 'brush') {
+      // Diş fırçalama (yuvalar) ve spor (antrenman/kütüphane) jenerik "+1" hızlı
+      // ekleme modeline uymaz; uzun basış kendi ekranlarını açar.
+      if (module.key === 'brush' || module.key === 'workout') {
         onOpenModule(module);
         return;
       }

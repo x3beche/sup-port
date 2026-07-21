@@ -230,7 +230,7 @@ test.describe('Mağaza', () => {
   test('yeni kullanıcıda her şey kurulu', async ({ request }) => {
     const { token } = await registerUser(request, 'store');
     const apps = await (await request.get(`${API}/api/store`, { headers: auth(token) })).json();
-    expect(apps).toHaveLength(8);
+    expect(apps).toHaveLength(9);
     expect(apps.every((a: { installed: boolean }) => a.installed)).toBe(true);
     for (const a of apps) {
       expect(a.about.length).toBeGreaterThan(20);
@@ -249,7 +249,8 @@ test.describe('Mağaza', () => {
 
     const summary = await (await request.get(`${API}/api/summary?date=${TODAY}`, { headers })).json();
     expect(summary.modules.some((m: { key: string }) => m.key === 'meditation')).toBe(false);
-    expect(summary.module_count).toBe(7);
+    // 9 varsayılan modülden biri (meditation) kaldırıldı.
+    expect(summary.module_count).toBe(8);
 
     const order = await (await request.get(`${API}/api/order`, { headers })).json();
     expect(order).not.toContain('meditation');
@@ -301,13 +302,13 @@ test.describe('Modül sırası', () => {
   test('varsayılan sıra kayıt sırasıdır', async ({ request }) => {
     const { token } = await registerUser(request, 'order');
     const order = await (await request.get(`${API}/api/order`, { headers: auth(token) })).json();
-    expect(order).toEqual(['water', 'meal', 'brush', 'english', 'steps', 'sleep', 'reading', 'meditation']);
+    expect(order).toEqual(['water', 'meal', 'brush', 'english', 'workout', 'steps', 'sleep', 'reading', 'meditation']);
   });
 
   test('kaydedilen sıra özete yansır', async ({ request }) => {
     const { token } = await registerUser(request, 'ordersave');
     const headers = auth(token);
-    const wanted = ['sleep', 'water', 'steps', 'english', 'brush', 'meal', 'reading', 'meditation'];
+    const wanted = ['sleep', 'water', 'steps', 'english', 'brush', 'meal', 'reading', 'meditation', 'workout'];
 
     expect((await request.put(`${API}/api/order`, { headers, data: { order: wanted } })).status()).toBe(200);
 
@@ -325,8 +326,8 @@ test.describe('Modül sırası', () => {
 
     // A new module must not disappear just because an old order predates it.
     expect(result.slice(0, 2)).toEqual(['steps', 'water']);
-    expect(result).toHaveLength(8);
-    expect(new Set(result).size).toBe(8);
+    expect(result).toHaveLength(9);
+    expect(new Set(result).size).toBe(9);
   });
 
   test('bilinmeyen ve tekrar eden anahtarlar reddedilir', async ({ request }) => {
@@ -648,6 +649,206 @@ test.describe('Diş fırçalama', () => {
       data: { slot: 'noon', done: true },
     });
     expect(res.status()).toBe(422);
+  });
+});
+
+test.describe('Spor — kütüphane', () => {
+  test('kütüphane 40 egzersiz döner, görsel alanı yok', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-lib');
+    const res = await request.get(`${API}/api/spor/exercises`, { headers: auth(token) });
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(body.count).toBe(40);
+    expect(body.exercises).toHaveLength(40);
+    // Telif riski nedeniyle görsel alanı istemciye gitmemeli.
+    expect(body.exercises.every((e: Record<string, unknown>) => !('image' in e))).toBe(true);
+    expect(body.exercises[0]).toHaveProperty('met');
+    expect(body.exercises[0]).toHaveProperty('steps');
+  });
+
+  test('kategori ve düşük etkili filtresi çalışır', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-filter');
+    const cardio = await (
+      await request.get(`${API}/api/spor/exercises?category=kardiyo`, { headers: auth(token) })
+    ).json();
+    expect(cardio.exercises.length).toBeGreaterThan(0);
+    expect(cardio.exercises.every((e: { category: string }) => e.category === 'kardiyo')).toBe(true);
+
+    const low = await (
+      await request.get(`${API}/api/spor/exercises?low_impact=true`, { headers: auth(token) })
+    ).json();
+    expect(low.exercises.every((e: { low_impact: boolean }) => e.low_impact)).toBe(true);
+    // Yüksek etkili (burpee/jumping jack) düşük etkili filtresinde olmamalı.
+    expect(low.exercises.some((e: { key: string }) => e.key === 'burpee')).toBe(false);
+  });
+
+  test('egzersiz detayı adımlar ve kırmızı bayrak içerir; bilinmeyen 404', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-detail');
+    const res = await request.get(`${API}/api/spor/exercises/bodyweight_squat`, { headers: auth(token) });
+    expect(res.status()).toBe(200);
+    const e = await res.json();
+    expect(e.steps.length).toBeGreaterThan(0);
+    expect(e.red_flags.length).toBeGreaterThan(0);
+
+    const missing = await request.get(`${API}/api/spor/exercises/yokboyle`, { headers: auth(token) });
+    expect(missing.status()).toBe(404);
+  });
+
+  test('spor uçları oturum ister', async ({ request }) => {
+    for (const path of ['/api/spor/exercises', '/api/spor/meta', '/api/spor/weekly', '/api/spor/profile']) {
+      expect((await request.get(`${API}${path}`)).status()).toBe(401);
+    }
+  });
+});
+
+test.describe('Spor — profil ve PAR-Q', () => {
+  test('yeni kullanıcının profili boş', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-profile');
+    const p = await (await request.get(`${API}/api/spor/profile`, { headers: auth(token) })).json();
+    expect(p.height_cm).toBeNull();
+    expect(p.parq_completed).toBe(false);
+  });
+
+  test('profil kısmi güncellenir', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-profile-upd');
+    const p = await (
+      await request.put(`${API}/api/spor/profile`, {
+        headers: auth(token),
+        data: { height_cm: 175, sex: 'erkek', goal: 'ver', target_weight_kg: 75 },
+      })
+    ).json();
+    expect(p.height_cm).toBe(175);
+    expect(p.sex).toBe('erkek');
+    expect(p.goal).toBe('ver');
+  });
+
+  test('PAR-Q "evet" hekime danış işareti koyar', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-parq');
+    const clean = await (
+      await request.post(`${API}/api/spor/parq`, {
+        headers: auth(token),
+        data: { answers: [false, false, false, false, false, false, false] },
+      })
+    ).json();
+    expect(clean.parq_completed).toBe(true);
+    expect(clean.parq_flagged).toBe(false);
+
+    const flagged = await (
+      await request.post(`${API}/api/spor/parq`, {
+        headers: auth(token),
+        data: { answers: [true, false, false, false, false, false, false] },
+      })
+    ).json();
+    expect(flagged.parq_flagged).toBe(true);
+  });
+});
+
+test.describe('Spor — vücut takibi (BMI)', () => {
+  test('boy varsa BMI ve kategori hesaplanır, bel riski gelir', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-bmi');
+    const headers = auth(token);
+    await request.put(`${API}/api/spor/profile`, {
+      headers,
+      data: { height_cm: 175, sex: 'erkek' },
+    });
+    const m = await (
+      await request.post(`${API}/api/spor/metrics?date=${TODAY}`, {
+        headers,
+        data: { weight_kg: 90, waist_cm: 105 },
+      })
+    ).json();
+    // 90 / 1.75^2 = 29.4 → fazla kilolu
+    expect(m.bmi).toBeCloseTo(29.4, 1);
+    expect(m.bmi_category).toBe('fazla_kilolu');
+    // Bel 105 > 102 (erkek) → yüksek risk
+    expect(m.waist_risk).toBe('yuksek');
+  });
+
+  test('boy yoksa BMI null', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-nobmi');
+    const m = await (
+      await request.post(`${API}/api/spor/metrics?date=${TODAY}`, {
+        headers: auth(token),
+        data: { weight_kg: 80 },
+      })
+    ).json();
+    expect(m.bmi).toBeNull();
+    expect(m.bmi_category).toBeNull();
+  });
+
+  test('özet güvenli kilo verme süresini verir', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-safe');
+    const headers = auth(token);
+    await request.put(`${API}/api/spor/profile`, { headers, data: { height_cm: 175, goal: 'ver', target_weight_kg: 80 } });
+    await request.post(`${API}/api/spor/metrics?date=${TODAY}`, { headers, data: { weight_kg: 90 } });
+    const s = await (await request.get(`${API}/api/spor/metrics/summary?date=${TODAY}`, { headers })).json();
+    expect(s.has_data).toBe(true);
+    expect(s.to_lose_kg).toBeCloseTo(10, 1);
+    // 10 kg güvenli hızda: min 10 hafta (1 kg/hafta), max 20 hafta (0.5 kg/hafta)
+    expect(s.safe_min_weeks).toBe(10);
+    expect(s.safe_max_weeks).toBe(20);
+  });
+});
+
+test.describe('Spor — antrenman ve hedef', () => {
+  test('antrenman süre + kalori hesaplar ve güne yansır', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-workout');
+    const headers = auth(token);
+    // Kalori için kilo gerekli.
+    await request.post(`${API}/api/spor/metrics?date=${TODAY}`, { headers, data: { weight_kg: 80 } });
+
+    const w = await (
+      await request.post(`${API}/api/spor/workouts?date=${TODAY}`, {
+        headers,
+        data: { items: [{ key: 'brisk_walk', duration_sec: 1800 }] },
+      })
+    ).json();
+    expect(w.duration_min).toBe(30);
+    // kcal = MET(4.3) × 80 kg × 0.5 saat = 172
+    expect(w.calories).toBe(172);
+    expect(w.has_strength).toBe(false);
+
+    // Günlük puana yansımalı: workout modülü değeri = dakika.
+    const summary = await (await request.get(`${API}/api/summary?date=${TODAY}`, { headers })).json();
+    const workout = summary.modules.find((m: { key: string }) => m.key === 'workout');
+    expect(workout.value).toBe(30);
+    expect(workout.completed).toBe(true); // hedef 30 dk
+  });
+
+  test('kuvvet antrenmanı haftalık kuvvet gününe sayılır', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-strength');
+    const headers = auth(token);
+    await request.post(`${API}/api/spor/workouts?date=${TODAY}`, {
+      headers,
+      data: { items: [{ key: 'bodyweight_squat', sets: 3, reps: 12 }] },
+    });
+    const weekly = await (await request.get(`${API}/api/spor/weekly?date=${TODAY}`, { headers })).json();
+    expect(weekly.strength_days).toBe(1);
+    expect(weekly.active_minutes).toBeGreaterThan(0);
+    expect(weekly.strength_target).toBe(2);
+  });
+
+  test('bilinmeyen egzersizli antrenman 404', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-badworkout');
+    const res = await request.post(`${API}/api/spor/workouts?date=${TODAY}`, {
+      headers: auth(token),
+      data: { items: [{ key: 'uydurma_hareket' }] },
+    });
+    expect(res.status()).toBe(404);
+  });
+
+  test('öneri kural-temelli yapı döner (llm kapalı)', async ({ request }) => {
+    const { token } = await registerUser(request, 'spor-rec');
+    const headers = auth(token);
+    await request.put(`${API}/api/spor/profile`, { headers, data: { height_cm: 170, goal: 'ver' } });
+    await request.post(`${API}/api/spor/metrics?date=${TODAY}`, { headers, data: { weight_kg: 95 } });
+    const rec = await (await request.get(`${API}/api/spor/recommendation?llm=false`, { headers })).json();
+    expect(rec.source).toBe('rule');
+    expect(rec.focus.length).toBeGreaterThan(0);
+    expect(rec.recommended_exercise_keys.length).toBeGreaterThan(0);
+    expect(rec.disclaimer).toBeTruthy();
+    // BMI 95/1.7^2 = 32.9 → obez → yüksek etkiliden kaçın
+    expect(rec.avoid_high_impact).toBe(true);
   });
 });
 

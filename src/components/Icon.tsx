@@ -11,6 +11,7 @@ export type IconName =
   | 'brush'
   | 'language'
   | 'steps'
+  | 'dumbbell'
   | 'moon'
   | 'book'
   | 'lotus'
@@ -91,6 +92,15 @@ function renderPaths(name: IconName, stroke: object, color: string) {
           <Path d="M5.1 7.4c0-1.2.9-2.2 2.1-2.2s2.1 1 2.1 2.2c0 .8-.9 1.2-2.1 1.2s-2.1-.4-2.1-1.2z" {...stroke} strokeWidth={1.3} />
           <Path d="M16.8 12.2c1.7 0 2.8 1.3 2.8 3.1 0 2-1 4.9-2.8 4.9s-2.8-2.9-2.8-4.9c0-1.8 1.1-3.1 2.8-3.1z" {...stroke} />
           <Path d="M14.7 10c0-1.2.9-2.2 2.1-2.2s2.1 1 2.1 2.2c0 .8-.9 1.2-2.1 1.2s-2.1-.4-2.1-1.2z" {...stroke} strokeWidth={1.3} />
+        </>
+      );
+
+    case 'dumbbell':
+      // Yatay halter: iki uçta ağırlık blokları + orta bar.
+      return (
+        <>
+          <Path d="M4 9v6M6.5 7.5v9M17.5 7.5v9M20 9v6" {...stroke} />
+          <Path d="M6.5 12h11" {...stroke} />
         </>
       );
 
