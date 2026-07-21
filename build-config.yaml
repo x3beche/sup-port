@@ -1,36 +1,50 @@
 # sup-port — uygulama derleme yapılandırması
 #
-# Buradaki değerler hem `expo start` (web/geliştirme) hem de APK derlemesi
+# Buradaki değerler hem `expo start` (web/geliştirme) hem de APK/AAB derlemesi
 # tarafından app.config.js üzerinden okunur. Bir değeri değiştirip yeniden
-# derlemen yeterli:  bash scripts/build-apk.sh
+# derlemen yeterli:  bash scripts/build-aab.sh   (Play için)
+#                    bash scripts/build-apk.sh   (yan yükleme/test için)
 #
-# NOT: Bu dosya gizli bilgi İÇERMEZ ve depoya girer. Backend'in MongoDB/JWT
-# gibi çalışma-zamanı sırları ayrı ve gitignore'lu olan config.yaml'dadır.
+# NOT: Bu dosya gizli bilgi İÇERMEZ ve depoya girer.
+#  - Backend'in MongoDB/JWT sırları: config.yaml (gitignore'lu)
+#  - Release keystore parolaları: keystore.properties (gitignore'lu)
 
 app:
   name: sup-port
   slug: sup-port
   android_package: app.support.tracker
+  # Her Play yüklemesinde version_code MUTLAKA artmalı; Play aynı kodu iki kez
+  # kabul etmez. version (adı) kullanıcıya görünür, semver ilerlet.
   version: "1.0.0"
-  # Her yayında artır; Play Store aynı versionCode'u ikinci kez kabul etmez.
   version_code: 1
 
-# Uygulamanın bağlanacağı backend. Aktif ortam `environment` ile seçilir;
-# APK bu ortamın adresiyle derlenir.
+# Play 2025 benchmark'ları: target >= 34 zorunlu, min 24 önerilir.
+# Expo SDK 57 compileSdk 36 ile gelir; target'i de 36'da tutmak Play'i geçer.
+sdk:
+  min: 24
+  target: 36
+  compile: 36
+
+# Uygulamanın bağlanacağı backend. Aktif ortam `environment` ile seçilir.
+# TEST ve PRODUCTION adresleri karışmasın: release derlemesi 'production'
+# bekler (aksi halde build-aab.sh uyarır ve REQUIRE_PRODUCTION=0 ister).
 environment: lan   # seçenekler: lan | localhost | production
 api:
-  # Telefonun geliştirme makinesine aynı Wi-Fi üzerinden ulaştığı adres.
   lan: http://10.40.30.213:4000
-  # Yalnızca web/emülatörde işe yarar (telefonda "localhost" telefonun kendisidir).
   localhost: http://localhost:4000
-  # Backend herkese açık bir sunucuya deploy edilince burayı doldur.
-  production: https://api.example.com
+  production: https://api.example.com   # backend deploy edilince doldur
 
 android:
-  # Backend https değil http olduğu sürece gerekli; aksi halde Android 9+
-  # temiz-metin (cleartext) istekleri engeller ve uygulama backend'e ulaşamaz.
+  # Backend https değil http olduğu sürece gerekli. HTTPS production'a
+  # geçince false yapabilirsin (temiz-metin trafiği tamamen kapanır).
   uses_cleartext_traffic: true
 
+release:
+  # Proguard/R8 kod küçültme + kaynak temizleme. Açınca APK/AAB küçülür ama
+  # native modüller için kural gerekebilir; açtıktan sonra kritik akışları
+  # cihazda yeniden test et.
+  minify: true
+  shrink_resources: true
+
 theme:
-  # Koyu tema; açılış ve adaptif ikon zemini.
   background: "#000000"

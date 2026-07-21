@@ -32,6 +32,8 @@ function resolveApiUrl(cfg) {
 module.exports = () => {
   const cfg = loadBuildConfig();
   const app = cfg.app || {};
+  const sdk = cfg.sdk || {};
+  const release = cfg.release || {};
   const background = (cfg.theme && cfg.theme.background) || base.backgroundColor;
   const apiUrl = resolveApiUrl(cfg);
 
@@ -55,10 +57,19 @@ module.exports = () => {
         'expo-build-properties',
         {
           android: {
+            // Play 2025 benchmark: target >= 34 zorunlu, min 24.
+            minSdkVersion: sdk.min ?? 24,
+            targetSdkVersion: sdk.target ?? 36,
+            compileSdkVersion: sdk.compile ?? 36,
             usesCleartextTraffic: cfg.android?.uses_cleartext_traffic ?? true,
+            // R8/Proguard: build-config.yaml release bloğundan.
+            enableProguardInReleaseBuilds: release.minify ?? false,
+            enableShrinkResourcesInReleaseBuilds: release.shrink_resources ?? false,
           },
         },
       ],
+      // Debug key yerine gerçek release keystore ile imzalama.
+      './plugins/withReleaseSigning',
     ],
     // Uygulama API adresini buradan okur (bkz. src/lib/api.ts). extra derleme
     // anında pakete gömülür, standalone APK'da da erişilebilir.

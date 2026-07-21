@@ -51,3 +51,8 @@ __pycache__/
 /ios
 /android
 android/local.properties
+
+# release imzalama (ASLA commit etme)
+keystore.properties
+release/*.keystore
+release/*.jks

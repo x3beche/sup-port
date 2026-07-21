@@ -14,13 +14,13 @@ export PATH="$JAVA_HOME/bin:$PATH"
 cd "$(dirname "$0")/.."
 
 # Aktif API adresini ve sürümü build-config.yaml'dan (veya override'dan) çöz.
-read -r API VERSION < <(node -e '
+IFS=' ' read -r API VERSION < <(node -e '
   const fs = require("fs"), yaml = require("js-yaml");
   const c = yaml.load(fs.readFileSync("build-config.yaml", "utf8")) || {};
   const env = c.environment || "lan";
   const api = process.env.EXPO_PUBLIC_API_URL || (c.api && c.api[env]) || "";
   const version = (c.app && c.app.version) || "0.0.0";
-  process.stdout.write(api + " " + version);
+  process.stdout.write(api + " " + version + "\n");
 ')
 
 if [ -z "$API" ]; then

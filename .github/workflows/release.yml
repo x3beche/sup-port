@@ -55,26 +55,54 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}-
 
-      - name: Release APK derle
-        working-directory: android
-        run: ./gradlew assembleRelease --no-daemon -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
+      - name: Release keystore'u hazırla
+        # Keystore repoda değil; CI'da base64 secret'tan yazılır. Secret yoksa
+        # derleme yine çalışır (imza debug'a düşer) ama Play'e YÜKLENEMEZ.
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::RELEASE_KEYSTORE_BASE64 secret yok — imza debug key ile yapılacak (Play'e yüklenemez)."
+            exit 0
+          fi
+          mkdir -p release
+          echo "$KEYSTORE_BASE64" | base64 -d > release/sup-port.keystore
+          cat > keystore.properties <<EOF
+          storeFile=release/sup-port.keystore
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
 
-      - name: APK'yı adlandır
-        id: apk
+      - name: Release AAB + APK derle
+        working-directory: android
+        run: |
+          ./gradlew bundleRelease assembleRelease --no-daemon \
+            -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
+
+      - name: Artefaktları adlandır
+        id: artifacts
         run: |
           VERSION="${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}"
-          SRC=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
-          if [ -z "$SRC" ]; then echo "APK bulunamadı"; exit 1; fi
-          DEST="sup-port-${VERSION}.apk"
-          cp "$SRC" "$DEST"
-          echo "path=$DEST" >> "$GITHUB_OUTPUT"
-          ls -lh "$DEST"
+          AAB=$(find android/app/build/outputs/bundle/release -name '*.aab' | head -1)
+          APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          [ -z "$AAB" ] && { echo "AAB bulunamadı"; exit 1; }
+          cp "$AAB" "sup-port-${VERSION}.aab"
+          cp "$APK" "sup-port-${VERSION}.apk"
+          echo "aab=sup-port-${VERSION}.aab" >> "$GITHUB_OUTPUT"
+          echo "apk=sup-port-${VERSION}.apk" >> "$GITHUB_OUTPUT"
+          ls -lh sup-port-${VERSION}.*
 
       - name: Artefakt olarak yükle
         uses: actions/upload-artifact@v4
         with:
-          name: sup-port-apk
-          path: ${{ steps.apk.outputs.path }}
+          name: sup-port-release
+          path: |
+            ${{ steps.artifacts.outputs.aab }}
+            ${{ steps.artifacts.outputs.apk }}
           if-no-files-found: error
 
       - name: Release oluştur (yalnızca tag'de)
@@ -83,12 +111,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ github.ref_name }}" \
-            "${{ steps.apk.outputs.path }}" \
+            "${{ steps.artifacts.outputs.aab }}" \
+            "${{ steps.artifacts.outputs.apk }}" \
             --title "sup-port ${{ github.ref_name }}" \
-            --notes "Kişisel gelişim superapp'inin ilk sürümü.
+            --notes "Kişisel gelişim superapp'i.
 
-          **Kurulum:** APK'yı Samsung Galaxy S23'e indirip aç, bilinmeyen kaynaklara izin ver.
+          - **.aab** — Play Console'a yüklemek için (bkz. RELEASE.md).
+          - **.apk** — Samsung Galaxy S23'e doğrudan kurmak için.
 
-          **Önemli:** Uygulama backend'e \`$EXPO_PUBLIC_API_URL\` adresinden bağlanır.
-          Telefon bu adresle aynı ağda olmalı ve backend çalışıyor olmalıdır.
-          Farklı bir adres için workflow_dispatch ile yeniden derleyin."
+          Uygulama backend'e build-config.yaml'daki adresten bağlanır; telefon o
+          adrese erişebilmeli ve backend çalışıyor olmalıdır."
