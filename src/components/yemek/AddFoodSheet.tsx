@@ -10,9 +10,13 @@ import {
   View,
 } from 'react-native';
 import { Icon, type IconName } from '../Icon';
+import { FoodBarcodeScanner } from './FoodBarcodeScanner';
+import { MealCameraCapture } from './MealCameraCapture';
 import { apiRequest } from '../../lib/api';
 import { onColor, tabularNums, theme } from '../../theme';
 import type { Food, MealType, PhotoEstimate } from '../../types';
+
+const IS_WEB = Platform.OS === 'web';
 
 type Tab = 'arama' | 'barkod' | 'foto' | 'elle';
 
@@ -291,26 +295,30 @@ function BarcodeTab({
   const [product, setProduct] = useState<Food | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [qty, setQty] = useState('');
+  const [scanning, setScanning] = useState(false);
 
-  const lookup = useCallback(async () => {
-    const digits = code.trim();
-    if (!digits) return;
-    setLooking(true);
-    setNotFound(false);
-    try {
-      const res = await apiRequest<{ found: boolean; food: Food }>(
-        `/api/yemek/foods/barcode/${encodeURIComponent(digits)}`,
-        { token },
-      );
-      setProduct(res.food);
-      setQty(String(res.food.default_serving_g ?? 100));
-    } catch {
-      setNotFound(true);
-      setProduct(null);
-    } finally {
-      setLooking(false);
-    }
-  }, [code, token]);
+  const lookup = useCallback(
+    async (codeArg?: string) => {
+      const digits = (codeArg ?? code).trim();
+      if (!digits) return;
+      setLooking(true);
+      setNotFound(false);
+      try {
+        const res = await apiRequest<{ found: boolean; food: Food }>(
+          `/api/yemek/foods/barcode/${encodeURIComponent(digits)}`,
+          { token },
+        );
+        setProduct(res.food);
+        setQty(String(res.food.default_serving_g ?? 100));
+      } catch {
+        setNotFound(true);
+        setProduct(null);
+      } finally {
+        setLooking(false);
+      }
+    },
+    [code, token],
+  );
 
   if (product) {
     return (
@@ -320,20 +328,25 @@ function BarcodeTab({
 
   return (
     <>
-      <Text style={styles.hintText}>Paketli ürünün barkod numarasını gir (Open Food Facts'te aranır).</Text>
+      <Text style={styles.hintText}>Paketli ürünün barkodunu kameradan tara ya da numarayı elle gir (Open Food Facts'te aranır).</Text>
+      {/* Kameradan tarama — native'de canlı; web'de tarayıcı "desteklenmiyor" der. */}
+      <Pressable onPress={() => setScanning(true)} testID="barcode-scan" accessibilityRole="button" style={[styles.scanBtn, { borderColor: color }]}>
+        <Icon name="barcode" size={18} color={color} />
+        <Text style={[styles.scanBtnText, { color }]}>Kameradan tara</Text>
+      </Pressable>
       <View style={styles.searchRow}>
         <TextInput
           value={code}
           onChangeText={setCode}
-          onSubmitEditing={lookup}
+          onSubmitEditing={() => lookup()}
           keyboardType="number-pad"
           placeholder="örn. 8699999000024"
           placeholderTextColor={theme.color.textFaint}
           style={[styles.input, styles.flex1]}
           testID="barcode-input"
         />
-        <Pressable onPress={lookup} testID="barcode-go" accessibilityRole="button" style={[styles.goBtn, { backgroundColor: color }]}>
-          <Icon name="barcode" size={18} color={onColor(color)} />
+        <Pressable onPress={() => lookup()} testID="barcode-go" accessibilityRole="button" style={[styles.goBtn, { backgroundColor: color }]}>
+          <Icon name="search" size={18} color={onColor(color)} />
         </Pressable>
       </View>
       {looking ? <ActivityIndicator color={color} style={styles.pad} /> : null}
@@ -341,6 +354,17 @@ function BarcodeTab({
         <Text style={styles.emptyText} testID="barcode-notfound">
           Ürün bulunamadı. Arama ya da elle ekleyebilirsin.
         </Text>
+      ) : null}
+      {scanning ? (
+        <FoodBarcodeScanner
+          color={color}
+          onClose={() => setScanning(false)}
+          onScanned={(c) => {
+            setScanning(false);
+            setCode(c);
+            void lookup(c);
+          }}
+        />
       ) : null}
     </>
   );
@@ -365,39 +389,47 @@ function PhotoTab({
   const [draft, setDraft] = useState<PhotoEstimate | null>(null);
   const [items, setItems] = useState<{ name: string; qty_g: string; kcal: string }[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
 
-  const canNative = Platform.OS === 'web';
+  const runEstimate = useCallback(
+    async (dataUrl: string) => {
+      setEstimating(true);
+      setMsg(null);
+      try {
+        const res = await apiRequest<PhotoEstimate>('/api/yemek/meals/estimate', {
+          method: 'POST',
+          body: { consent: true, image_base64: dataUrl },
+          token,
+        });
+        setDraft(res);
+        setItems(res.items.map((it) => ({ name: it.name, qty_g: String(it.qty_g), kcal: String(Math.round(it.kcal)) })));
+      } catch (err) {
+        setMsg((err as Error)?.message ?? 'Tahmin yapılamadı.');
+      } finally {
+        setEstimating(false);
+      }
+    },
+    [token],
+  );
 
-  const estimate = useCallback(async () => {
+  // Web: dosya seçici. Native: canlı kamera (MealCameraCapture).
+  const start = useCallback(async () => {
     setMsg(null);
     if (!consent) {
       setMsg('Devam etmek için onay kutusunu işaretle.');
       return;
     }
-    const dataUrl = await pickImageWeb();
-    if (!dataUrl) {
-      setMsg(
-        canNative
-          ? 'Görüntü seçilmedi.'
-          : 'Kamera ile çekim için uygulamanın geliştirme derlemesi gerekir. Şimdilik arama, barkod veya elle giriş kullan.',
-      );
-      return;
+    if (IS_WEB) {
+      const dataUrl = await pickImageWeb();
+      if (!dataUrl) {
+        setMsg('Görüntü seçilmedi.');
+        return;
+      }
+      await runEstimate(dataUrl);
+    } else {
+      setCapturing(true);
     }
-    setEstimating(true);
-    try {
-      const res = await apiRequest<PhotoEstimate>('/api/yemek/meals/estimate', {
-        method: 'POST',
-        body: { consent: true, image_base64: dataUrl },
-        token,
-      });
-      setDraft(res);
-      setItems(res.items.map((it) => ({ name: it.name, qty_g: String(it.qty_g), kcal: String(Math.round(it.kcal)) })));
-    } catch (err) {
-      setMsg((err as Error)?.message ?? 'Tahmin yapılamadı.');
-    } finally {
-      setEstimating(false);
-    }
-  }, [canNative, consent, token]);
+  }, [consent, runEstimate]);
 
   const confirm = useCallback(() => {
     const payload = items
@@ -501,14 +533,14 @@ function PhotoTab({
         <ActivityIndicator color={color} style={styles.pad} />
       ) : (
         <Pressable
-          onPress={estimate}
+          onPress={start}
           testID="photo-pick"
           accessibilityRole="button"
           style={[styles.primaryBtn, { backgroundColor: consent ? color : theme.color.card }]}
         >
           <Icon name="camera" size={18} color={consent ? onColor(color) : theme.color.textMuted} />
           <Text style={[styles.primaryBtnText, { color: consent ? onColor(color) : theme.color.textMuted }]}>
-            Fotoğraf seç
+            {IS_WEB ? 'Fotoğraf seç' : 'Fotoğraf çek'}
           </Text>
         </Pressable>
       )}
@@ -516,6 +548,16 @@ function PhotoTab({
         <Text style={styles.emptyText} testID="photo-msg">
           {msg}
         </Text>
+      ) : null}
+      {capturing ? (
+        <MealCameraCapture
+          color={color}
+          onClose={() => setCapturing(false)}
+          onCaptured={(dataUrl) => {
+            setCapturing(false);
+            void runEstimate(dataUrl);
+          }}
+        />
       ) : null}
     </View>
   );
@@ -764,6 +806,17 @@ const styles = StyleSheet.create({
   },
   qtyInput: { width: 88, textAlign: 'center', paddingHorizontal: theme.space(2) },
   goBtn: { width: 50, height: 50, borderRadius: theme.radius.md, alignItems: 'center', justifyContent: 'center' },
+  scanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.space(2),
+    minHeight: 48,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    marginBottom: theme.space(3),
+  },
+  scanBtnText: { fontSize: theme.font.label, fontWeight: '800' },
   list: { flex: 1, marginTop: theme.space(3) },
   pad: { paddingVertical: theme.space(5) },
   emptyText: { fontSize: theme.font.label, color: theme.color.textMuted, textAlign: 'center', paddingVertical: theme.space(5), lineHeight: 20 },
